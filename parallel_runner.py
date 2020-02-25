@@ -4,18 +4,18 @@ import numpy as np
 import torch
 import cv2
 from collections import deque
-import  sys
+import sys
 
 
 class ParallelRunner(object):
 
-    def __init__(self, n_workers, max_steps, env, agent):
+    def __init__(self, n_workers, max_steps, max_episode, env, agent):
         self.n_workers = n_workers
         self.max_steps = max_steps
+        self.max_episode = max_episode
         self.env = env
         self.agent = agent
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
 
         self.stacked_states = deque([np.zeros((84, 84)) for _ in range(4)], maxlen=4)
 
@@ -26,44 +26,47 @@ class ParallelRunner(object):
             pool.close()
             pool.join()
 
-        states = [experience[0] for experience in experiences]
-        actions = [experience[1] for experience in experiences]
-        rewards = [experience[2] for experience in experiences]
-        dones = [experience[3] for experience in experiences]
-        values = [experience[4] for experience in experiences]
-        next_values = [experience[5] for experience in experiences]
+        states = [state for experience in experiences for state in experience[0]]
+        actions = [action for experience in experiences for action in experience[1]]
+        rewards = [reward for experience in experiences for reward in experience[2]]
+        dones = [done for experience in experiences for done in experience[3]]
+        values = [value for experience in experiences for value in experience[4]]
+        next_values = [next_value for experience in experiences for next_value in experience[5]]
 
-        return states, actions, rewards, dones, values, next_values
+        return np.array(states), np.array(actions), np.array(rewards), np.array(dones), values, next_values
 
     def __call__(self, *args, **kwargs):
         return self.run_one_episode()
 
     def run_one_episode(self):
-        states = []
-        actions = []
-        rewards = []
-        dones = []
-        values = []
-        s = self.reset_env()
-        # self.env.render()
-        # cv2.waitKey(0)
-        state = self.stack_state(s, True)
-        for _ in range(self.max_steps):
-            action, v = self.agent.choose_action(state)
-            next_state, reward, done, _ = self.env.step(action)
-            states.append(state)
-            rewards.append(reward)
-            actions.append(action.detach())
-            dones.append(done)
-            values.append(v.detach())
-            state = self.stack_state(next_state, False)
-            self.env.render()
-            # cv2.waitKey(0)
-            if done:
-                break
+        episode = 0
+        while episode < self.max_episode:
+            states = []
+            actions = []
+            rewards = []
+            dones = []
+            values = []
+            s = self.reset_env()
+            state = self.stack_state(s, True)
+            print("----------New Episode--------------")
+            episode += 1
+            for _ in range(self.max_steps):
+                action, v = self.agent.choose_action(state)
+                next_state, reward, done, _ = self.env.step(action)
+                states.append(state)
+                rewards.append(reward)
+                actions.append(action.detach().cpu().numpy())
+                dones.append(done)
+                values.append(v.detach().cpu().numpy())
+                state = self.stack_state(next_state, False)
+                # self.env.render()
+                # cv2.waitKey(0)
+                print("collecting data")
+                if done:
+                    break
 
-        _, next_value = self.agent.choose_action(state)
-        return states, actions, rewards, dones, values, next_value.detach()
+            _, next_value = self.agent.choose_action(state)
+        return states, actions, rewards, dones, np.array(values), next_value.detach().cpu().numpy()
 
     def reset_env(self):
         seed = np.random.randint(0, sys.maxsize)

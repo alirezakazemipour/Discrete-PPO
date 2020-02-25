@@ -1,5 +1,6 @@
 from torch import nn
 from torch.nn import functional as F
+from torch.distributions import Categorical
 
 
 class Model(nn.Module):
@@ -34,9 +35,10 @@ class Model(nn.Module):
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc(x))
         value = self.v(x)
-        pi = F.softmax(self.policy(x), dim=1)
+        # pi = F.softmax(self.policy(x), dim=1)
+        dist = Categorical(F.softmax(self.policy(x), dim=1))
 
-        return pi, value
+        return dist, value
 
     @staticmethod
     def conv_shape(input, kernel_size, stride, padding=0):

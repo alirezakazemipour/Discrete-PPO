@@ -10,8 +10,9 @@ state_shape = test_env.observation_space.shape
 n_actions = test_env.action_space.n
 
 stack_shape = (84, 84, 4)
-n_workers = 1
-max_steps= 300
+n_workers = 2
+max_steps= 600
+max_episode = 1000
 lr = 6.25e-5
 
 print(f"state shape:{state_shape}\n"
@@ -24,6 +25,7 @@ if __name__ == "__main__":
                     agent=agent,
                     n_workers=n_workers,
                     max_steps=max_steps,
+                    max_episode=max_episode,
                     epochs=20,
                     mini_batch_size=4,
                     epsilon=0.2
