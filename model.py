@@ -9,12 +9,13 @@ class Model(nn.Module):
         self.state_shape = state_shape
         self.n_actions = n_actions
 
-        c, w, h = state_shape
+        w, h, c = state_shape
 
         self.conv1 = nn.Conv2d(in_channels=c, out_channels=16, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
 
-        flatten_num = self.conv_shape(self.conv_shape(w, 8, 4), 4, 2)
+        flatten_num = self.conv_shape(self.conv_shape(w, 8, 4), 4, 2) * 32
+
         self.fc = nn.Linear(in_features=flatten_num, out_features=256)
         self.v = nn.Linear(in_features=256, out_features=1)
         self.policy = nn.Linear(in_features=256, out_features=self.n_actions)

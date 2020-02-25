@@ -3,6 +3,7 @@ from torch.optim import Adam
 from torch import from_numpy
 from torch.distributions import Categorical
 from torch.nn import MSELoss
+import numpy as np
 
 
 class Agent:
@@ -19,7 +20,8 @@ class Agent:
         self.critic_loss = MSELoss()
 
     def choose_action(self, state):
-        state = from_numpy(state).float()
+        state = np.expand_dims(state, 0)
+        state = from_numpy(state).float().permute([0, 3, 1, 2])
         v, pi = self.new_policy(state)
         action = Categorical(pi).sample().cpu()
 
@@ -34,3 +36,4 @@ class Agent:
     def set_weights(self):
         for old_params, new_params in zip(self.old_policy.parameters(), self.new_policy.parameters()):
             old_params.data.copy_(new_params.data)
+

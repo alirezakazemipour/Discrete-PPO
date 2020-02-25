@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import cv2
 from collections import deque
+import  sys
 
 
 class ParallelRunner(object):
@@ -40,21 +41,28 @@ class ParallelRunner(object):
         dones = []
         values = []
         s = self.reset_env()
-        for _ in self.max_steps:
-            action, v = self.agent.choose_action(s)
+        # self.env.render()
+        # cv2.waitKey(0)
+        state = self.stack_state(s, True)
+        for _ in range(self.max_steps):
+            action, v = self.agent.choose_action(state)
             next_state, reward, done, _ = self.env.step(action)
-            states.append(s)
+            states.append(state)
             rewards.append(reward)
             actions.append(action)
             dones.append(done)
             values.append(v)
-            s = next_state
-        _, next_value = self.agent.choose_action(next_state)
+            state = self.stack_state(next_state, False)
+            self.env.render()
+            # cv2.waitKey(0)
+            if done:
+                break
 
+        _, next_value = self.agent.choose_action(state)
         return states, actions, rewards, dones, values, next_value
 
     def reset_env(self):
-        seed = np.random.randint(0, np.inf)
+        seed = np.random.randint(0, sys.maxsize)
         torch.manual_seed(seed)
         s = self.env.reset()
         return s
@@ -71,12 +79,12 @@ class ParallelRunner(object):
         else:
             self.stacked_states.append(s)
 
-        return np.stack(self.stacked_states)
+        return np.stack(self.stacked_states, axis=2)
 
     @staticmethod
-    def pre_process(self, img):
+    def pre_process(img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.resize(img, (84, 84))
-        img = np.expand_dims(img, 0)
+        # img = np.expand_dims(img, 0)
 
-        return img
+        return img / 255.0
