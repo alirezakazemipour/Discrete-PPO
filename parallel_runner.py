@@ -14,13 +14,17 @@ class ParallelRunner(object):
         self.max_steps = max_steps
         self.env = env
         self.agent = agent
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
         self.stacked_states = deque([np.zeros((84, 84)) for _ in range(4)], maxlen=4)
 
     def run(self):
         with closing(Pool(processes=self.n_workers)) as pool:
             experiences = pool.map(self, range(self.n_workers))
-            pool.terminate()
+            # pool.terminate()
+            pool.close()
+            pool.join()
 
         states = [experience[0] for experience in experiences]
         actions = [experience[1] for experience in experiences]
@@ -32,7 +36,7 @@ class ParallelRunner(object):
         return states, actions, rewards, dones, values, next_values
 
     def __call__(self, *args, **kwargs):
-        self.run_one_episode()
+        return self.run_one_episode()
 
     def run_one_episode(self):
         states = []
@@ -49,9 +53,9 @@ class ParallelRunner(object):
             next_state, reward, done, _ = self.env.step(action)
             states.append(state)
             rewards.append(reward)
-            actions.append(action)
+            actions.append(action.detach())
             dones.append(done)
-            values.append(v)
+            values.append(v.detach())
             state = self.stack_state(next_state, False)
             self.env.render()
             # cv2.waitKey(0)
@@ -59,7 +63,7 @@ class ParallelRunner(object):
                 break
 
         _, next_value = self.agent.choose_action(state)
-        return states, actions, rewards, dones, values, next_value
+        return states, actions, rewards, dones, values, next_value.detach()
 
     def reset_env(self):
         seed = np.random.randint(0, sys.maxsize)

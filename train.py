@@ -2,6 +2,7 @@ from parallel_runner import ParallelRunner
 from torch.distributions import Categorical
 import torch
 import numpy as np
+from torch import multiprocessing as mp
 
 
 class Train:
@@ -15,6 +16,9 @@ class Train:
         self.episode_counter = 0
         self.epochs = epochs
         self.mini_batch_size = mini_batch_size
+
+        mp.set_start_method('spawn')
+
 
     @staticmethod
     def choose_mini_batch(self, mini_batch_size, states, actions, returns, advs):
