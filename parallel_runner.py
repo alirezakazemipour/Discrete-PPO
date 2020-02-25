@@ -2,6 +2,8 @@ from torch.multiprocessing import Pool
 from contextlib import closing
 import numpy as np
 import torch
+import cv2
+from collections import deque
 
 
 class ParallelRunner(object):
@@ -11,6 +13,8 @@ class ParallelRunner(object):
         self.max_steps = max_steps
         self.env = env
         self.agent = agent
+
+        self.stacked_states = deque([np.zeros((84, 84)) for _ in range(4)], maxlen=4)
 
     def run(self):
         with closing(Pool(processes=self.n_workers)) as pool:
@@ -54,3 +58,25 @@ class ParallelRunner(object):
         torch.manual_seed(seed)
         s = self.env.reset()
         return s
+
+    def stack_state(self, s, new_episode=False):
+        s = self.pre_process(s)
+
+        if new_episode:
+            self.stacked_states = deque([np.zeros((84, 84)) for _ in range(4)], maxlen=4)
+            self.stacked_states.append(s)
+            self.stacked_states.append(s)
+            self.stacked_states.append(s)
+            self.stacked_states.append(s)
+        else:
+            self.stacked_states.append(s)
+
+        return np.stack(self.stacked_states)
+
+    @staticmethod
+    def pre_process(self, img):
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img = cv2.resize(img, (84, 84))
+        img = np.expand_dims(img, 0)
+
+        return img
