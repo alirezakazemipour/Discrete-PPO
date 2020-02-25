@@ -35,7 +35,7 @@ class Model(nn.Module):
         value = self.v(x)
         pi = F.softmax(self.policy(x), dim=1)
 
-        return value, pi
+        return pi, value
 
     @staticmethod
     def conv_shape(input, kernel_size, stride, padding=0):

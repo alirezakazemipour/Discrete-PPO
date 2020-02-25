@@ -22,8 +22,9 @@ class ParallelRunner(object):
         rewards = [experience[2] for experience in experiences]
         dones = [experience[3] for experience in experiences]
         values = [experience[4] for experience in experiences]
+        next_values = [experience[5] for experience in experiences]
 
-        return states, actions, rewards, dones, values
+        return states, actions, rewards, dones, values, next_values
 
     def __call__(self, *args, **kwargs):
         self.run_one_episode()
@@ -35,7 +36,7 @@ class ParallelRunner(object):
         dones = []
         values = []
         s = self.reset_env()
-        for step in self.max_steps:
+        for _ in self.max_steps:
             action, v = self.agent.choose_action(s)
             next_state, reward, done, _ = self.env.step(action)
             states.append(s)
@@ -44,8 +45,9 @@ class ParallelRunner(object):
             dones.append(done)
             values.append(v)
             s = next_state
+        _, next_value = self.agent.choose_action(next_state)
 
-        return states, actions, rewards, dones, values
+        return states, actions, rewards, dones, values, next_value
 
     def reset_env(self):
         seed = np.random.randint(0, np.inf)
