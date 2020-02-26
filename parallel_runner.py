@@ -5,6 +5,7 @@ import torch
 import cv2
 from collections import deque
 import sys
+import time
 
 
 class ParallelRunner(object):
@@ -39,33 +40,31 @@ class ParallelRunner(object):
         return self.run_one_episode()
 
     def run_one_episode(self):
-        episode = 0
-        while episode < self.max_episode:
-            states = []
-            actions = []
-            rewards = []
-            dones = []
-            values = []
-            s = self.reset_env()
-            state = self.stack_state(s, True)
-            print("----------New Episode--------------")
-            episode += 1
-            for _ in range(self.max_steps):
-                action, v = self.agent.choose_action(state)
-                next_state, reward, done, _ = self.env.step(action)
-                states.append(state)
-                rewards.append(reward)
-                actions.append(action.detach().cpu().numpy())
-                dones.append(done)
-                values.append(v.detach().cpu().numpy())
-                state = self.stack_state(next_state, False)
-                # self.env.render()
-                # cv2.waitKey(0)
-                print("collecting data")
-                if done:
-                    break
+
+        states = []
+        actions = []
+        rewards = []
+        dones = []
+        values = []
+        s = self.reset_env()
+        state = self.stack_state(s, True)
+        for _ in range(self.max_steps):
+            action, v = self.agent.choose_action(state)
+            next_state, reward, done, _ = self.env.step(action)
+            states.append(state)
+            rewards.append(reward)
+            actions.append(action.detach().cpu().numpy())
+            dones.append(done)
+            values.append(v.detach().cpu().numpy())
+            state = self.stack_state(next_state, False)
+            # self.env.render()
+            # time.sleep(0.05)
+            if done:
+                break
 
             _, next_value = self.agent.choose_action(state)
+        # return [0], [0], [0], [0], 0
+        self.close_env()
         return states, actions, rewards, dones, np.array(values), next_value.detach().cpu().numpy()
 
     def reset_env(self):
@@ -73,6 +72,9 @@ class ParallelRunner(object):
         torch.manual_seed(seed)
         s = self.env.reset()
         return s
+
+    def close_env(self):
+        self.env.close()
 
     def stack_state(self, s, new_episode=False):
         s = self.pre_process(s)
@@ -92,6 +94,5 @@ class ParallelRunner(object):
     def pre_process(img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.resize(img, (84, 84))
-        # img = np.expand_dims(img, 0)
 
         return img / 255.0

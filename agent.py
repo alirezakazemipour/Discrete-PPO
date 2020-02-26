@@ -7,12 +7,12 @@ import numpy as np
 import torch
 
 
+
 class Agent:
     def __init__(self, state_shape, n_actions, lr):
         self.n_actions = n_actions
         self.state_shape = state_shape
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        # self.device = "cpu"
 
         self.lr = lr
         self.new_policy = Model(state_shape=self.state_shape, n_actions=self.n_actions).to(self.device)
@@ -39,3 +39,5 @@ class Agent:
     def set_weights(self):
         for old_params, new_params in zip(self.old_policy.parameters(), self.new_policy.parameters()):
             old_params.data.copy_(new_params.data)
+
+

@@ -1,8 +1,9 @@
 from parallel_runner import ParallelRunner
-from torch.distributions import Categorical
+from copy import deepcopy
 import torch
 import numpy as np
 from torch import multiprocessing as mp
+from test import evaluate_model
 
 
 class Train:
@@ -19,6 +20,8 @@ class Train:
         self.mini_batch_size = mini_batch_size
 
         mp.set_start_method('spawn')
+
+        self.global_running_r = []
 
     @staticmethod
     def choose_mini_batch(mini_batch_size, states, actions, returns, advs):
@@ -51,15 +54,22 @@ class Train:
                 total_loss = 0. * crtitic_loss + actor_loss - 0.001 * entropy
                 self.agent.optimize(total_loss)
 
+                return total_loss, entropy, rewards
+
     def equalize_policies(self):
         self.agent.set_weights()
 
     def step(self):
-        states, actions, rewards, dones, values, next_values = self.parallel_runner.run()
-        self.episode_counter += 1
 
-        self.train(states, actions, rewards, dones, values, next_values)
-        self.equalize_policies()
+        while self.episode_counter < self.max_episode:
+            states, actions, rewards, dones, values, next_values = self.parallel_runner.run()
+            self.episode_counter += 1
+
+            total_loss, entropy, rewards = self.train(states, actions, rewards, dones, values, next_values)
+            self.equalize_policies()
+            # if self.episode_counter % 10 == 0:
+            evaluation_rewards = evaluate_model(self.agent, deepcopy(self.env))
+            self.print_logs(total_loss, entropy, evaluation_rewards)
 
     def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lamda=0.95):
         values = values + next_values
@@ -89,3 +99,16 @@ class Train:
         loss = torch.min(r_new, clamped_r)
         loss = - loss.mean()
         return loss
+
+    def print_logs(self, total_loss, entropy, rewards):
+
+        if self.episode_counter == 1:
+            self.global_running_r.append(rewards)
+        else:
+            self.global_running_r.append(self.global_running_r[-1] * 0.9 + rewards * 0.1)
+
+        print(f"Ep:{self.episode_counter}| "
+              f"Running_reward:{self.global_running_r[-1]:3.3f}| "
+              f"Total_loss:{total_loss:3.3f}| "
+              f"Entropy:{entropy:3.3f}| ")
+
