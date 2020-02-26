@@ -10,9 +10,10 @@ n_actions = test_env.action_space.n
 
 stack_shape = (84, 84, 4)
 n_workers = 2
-max_steps = test_env._max_episode_steps
-max_episode = 300
+max_steps = 128#test_env._max_episode_steps
+max_episode = 500
 lr = 3e-4
+epochs = 3
 
 if __name__ == "__main__":
     print(f"state shape:{state_shape}\n"
@@ -24,8 +25,8 @@ if __name__ == "__main__":
                     n_workers=n_workers,
                     max_steps=max_steps,
                     max_episode=max_episode,
-                    epochs=20,
-                    mini_batch_size=32 * 8,
+                    epochs=epochs,
+                    mini_batch_size=32,
                     epsilon=0.2
                     )
     trainer.step()

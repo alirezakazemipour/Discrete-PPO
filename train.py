@@ -51,7 +51,7 @@ class Train:
                 actor_loss = self.compute_ac_loss(ratio, adv)
                 crtitic_loss = self.agent.critic_loss(q_value, value)
 
-                total_loss = 0. * crtitic_loss + actor_loss - 0.001 * entropy
+                total_loss = 1 * crtitic_loss + actor_loss - 0.01 * entropy
                 self.agent.optimize(total_loss)
 
                 return total_loss, entropy, rewards
@@ -109,7 +109,7 @@ class Train:
             self.global_running_r.append(self.global_running_r[-1] * 0.99 + rewards * 0.01)
 
         print(f"Ep:{self.episode_counter}| "
+              f"Ep_Reward:{rewards}| "
               f"Running_reward:{self.global_running_r[-1]:3.3f}| "
               f"Total_loss:{total_loss:3.3f}| "
               f"Entropy:{entropy:3.3f}| ")
-

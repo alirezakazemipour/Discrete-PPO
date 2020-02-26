@@ -70,6 +70,7 @@ class ParallelRunner(object):
     def reset_env(self):
         seed = np.random.randint(0, sys.maxsize)
         torch.manual_seed(seed)
+        self.env.seed(seed)
         s = self.env.reset()
         return s
 
