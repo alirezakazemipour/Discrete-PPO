@@ -96,7 +96,7 @@ class Train:
 
     def compute_ac_loss(self, ratio, adv):
         r_new = ratio * adv
-        clamped_r = torch.clamp(r_new, 1 - self.epsilon, 1 + self.epsilon)
+        clamped_r = torch.clamp(ratio, 1 - self.epsilon, 1 + self.epsilon) * adv
         loss = torch.min(r_new, clamped_r)
         loss = - loss.mean()
         return loss
