@@ -12,14 +12,15 @@ class Model(nn.Module):
 
         w, h, c = state_shape
 
-        self.conv1 = nn.Conv2d(in_channels=c, out_channels=16, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
+        self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
 
-        flatten_num = (self.conv_shape(self.conv_shape(w, 8, 4), 4, 2) ** 2) * 32
+        flatten_num = (self.conv_shape(self.conv_shape(self.conv_shape(w, 8, 4), 4, 2), 3, 1) ** 2) * 64
 
-        self.fc = nn.Linear(in_features=flatten_num, out_features=256)
-        self.v = nn.Linear(in_features=256, out_features=1)
-        self.policy = nn.Linear(in_features=256, out_features=self.n_actions)
+        self.fc = nn.Linear(in_features=flatten_num, out_features=512)
+        self.v = nn.Linear(in_features=512, out_features=1)
+        self.policy = nn.Linear(in_features=512, out_features=self.n_actions)
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
@@ -32,6 +33,7 @@ class Model(nn.Module):
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
+        x = F.relu((self.conv3(x)))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc(x))
         value = self.v(x)
