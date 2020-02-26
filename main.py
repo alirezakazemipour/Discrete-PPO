@@ -10,11 +10,11 @@ n_actions = test_env.action_space.n
 
 stack_shape = (84, 84, 4)
 n_workers = 3
-max_steps = 2048#test_env._max_episode_steps
+max_steps = 256#test_env._max_episode_steps
 max_episode = 500
-lr = 2e-4
+lr = 7e-4
 epochs = 4
-cliprange=0.1
+cliprange=0.2
 
 if __name__ == "__main__":
     print(f"state shape:{state_shape}\n"

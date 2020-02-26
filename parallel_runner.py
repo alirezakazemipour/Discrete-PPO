@@ -32,9 +32,9 @@ class ParallelRunner(object):
         rewards = [reward for experience in experiences for reward in experience[2]]
         dones = [done for experience in experiences for done in experience[3]]
         values = [value for experience in experiences for value in experience[4]]
-        next_values = [next_value for experience in experiences for next_value in experience[5]]
+        next_values = [experience[5] for experience in experiences]
 
-        return np.array(states), np.array(actions), np.array(rewards), np.array(dones), values, next_values
+        return np.array(states), np.array(actions), np.array(rewards), np.array(dones), values, np.array(next_values)
 
     def __call__(self, *args, **kwargs):
         return self.run_one_episode()
@@ -60,12 +60,13 @@ class ParallelRunner(object):
             # self.env.render()
             # time.sleep(0.05)
             if done:
+                next_value = 0
                 break
-
-            _, next_value = self.agent.choose_action(state)
-        # return [0], [0], [0], [0], 0
+            else:
+                _, next_value = self.agent.choose_action(state)
+                next_value = next_value.detach().cpu().numpy()
         self.close_env()
-        return states, actions, rewards, dones, np.array(values), next_value.detach().cpu().numpy()
+        return states, actions, rewards, dones, np.array(values), [next_value]
 
     def reset_env(self):
         seed = np.random.randint(0, sys.maxsize)

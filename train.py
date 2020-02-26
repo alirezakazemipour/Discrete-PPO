@@ -73,7 +73,7 @@ class Train:
         self.agent.save_weights()
 
     def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lamda=0.95):
-        values = values + next_values
+        values = values + [next_values]
         gae = 0
         returns = []
         for step in reversed(range(len(rewards))):
