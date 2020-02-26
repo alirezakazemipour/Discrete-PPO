@@ -40,4 +40,20 @@ class Agent:
         for old_params, new_params in zip(self.old_policy.parameters(), self.new_policy.parameters()):
             old_params.data.copy_(new_params.data)
 
+    def save_weights(self):
+        # torch.save(self.actor.state_dict(), "./actor_weights.pth")
+        # torch.save(self.critic.state_dict(), "./critic_weights.pth")
+        torch.save(self.new_policy.state_dict(), "./weights.pth")
+
+    def load_weights(self):
+        # self.actor.load_state_dict(torch.load("./actor_weights.pth"))
+        # self.critic.load_state_dict(torch.load("./critic_weights.pth"))
+        pass
+
+    def set_to_eval_mode(self):
+        # self.actor.eval()
+        # self.critic.eval()
+        pass
+
+
 

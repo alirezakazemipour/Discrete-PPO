@@ -10,9 +10,9 @@ n_actions = test_env.action_space.n
 
 stack_shape = (84, 84, 4)
 n_workers = 2
-max_steps = 200
+max_steps = test_env._max_episode_steps
 max_episode = 300
-lr = 6.25e-5
+lr = 3e-4
 
 if __name__ == "__main__":
     print(f"state shape:{state_shape}\n"
@@ -29,3 +29,6 @@ if __name__ == "__main__":
                     epsilon=0.2
                     )
     trainer.step()
+
+#Todo
+#correct gae horizon

@@ -70,6 +70,7 @@ class Train:
             # if self.episode_counter % 10 == 0:
             evaluation_rewards = evaluate_model(self.agent, deepcopy(self.env))
             self.print_logs(total_loss, entropy, evaluation_rewards)
+        self.agent.save_weights()
 
     def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lamda=0.95):
         values = values + next_values
@@ -105,7 +106,7 @@ class Train:
         if self.episode_counter == 1:
             self.global_running_r.append(rewards)
         else:
-            self.global_running_r.append(self.global_running_r[-1] * 0.9 + rewards * 0.1)
+            self.global_running_r.append(self.global_running_r[-1] * 0.99 + rewards * 0.01)
 
         print(f"Ep:{self.episode_counter}| "
               f"Running_reward:{self.global_running_r[-1]:3.3f}| "
