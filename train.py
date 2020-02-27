@@ -34,7 +34,7 @@ class Train:
 
     def train(self, states, actions, rewards, dones, values, next_values):
         returns = self.get_gae(rewards, deepcopy(values), next_values, dones)
-        advs = returns - np.vstack(values).reshape(((len(values[0]) + len(values[1])), 1))
+        advs = returns - np.vstack(values).reshape((sum([len(values[i]) for i in range(self.n_workers)]), 1))
 
         for epoch in range(self.epochs):
             for state, action, q_value, adv in self.choose_mini_batch(self.mini_batch_size,
@@ -86,7 +86,7 @@ class Train:
                 gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
                 returns[worker].insert(0, gae + values[worker][step])
 
-        return np.vstack(returns).reshape((len(returns[0]) + len((returns[1]))), 1)
+        return np.vstack(returns).reshape((sum([len(returns[i]) for i in range(self.n_workers)]), 1))
 
     def calculate_ratio(self, states, actions):
         new_policy_log = self.calculate_log_probs(self.agent.new_policy, states, actions)
