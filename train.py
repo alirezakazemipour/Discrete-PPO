@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from torch import multiprocessing as mp
 from test import evaluate_model
+from copy import deepcopy
 
 
 class Train:
@@ -18,6 +19,7 @@ class Train:
         self.episode_counter = 0
         self.epochs = epochs
         self.mini_batch_size = mini_batch_size
+        torch.cuda.empty_cache()
 
         mp.set_start_method('spawn')
 
@@ -31,8 +33,8 @@ class Train:
             yield states[idxes], actions[idxes], returns[idxes], advs[idxes]
 
     def train(self, states, actions, rewards, dones, values, next_values):
-        returns = self.get_gae(rewards, values, next_values, dones)
-        advs = returns - np.array(values)
+        returns = self.get_gae(rewards, deepcopy(values), next_values, dones)
+        advs = returns - np.vstack(values).reshape(((len(values[0]) + len(values[1])), 1))
 
         for epoch in range(self.epochs):
             for state, action, q_value, adv in self.choose_mini_batch(self.mini_batch_size,
@@ -72,16 +74,19 @@ class Train:
             self.print_logs(total_loss, entropy, evaluation_rewards)
         self.agent.save_weights()
 
-    def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lamda=0.95):
-        values = values + [next_values]
+    def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lam=0.95):
         gae = 0
-        returns = []
-        for step in reversed(range(len(rewards))):
-            delta = rewards[step] + gamma * (values[step + 1]) * (1 - dones[step]) - values[step]
-            gae = delta + gamma * lamda * (1 - dones[step]) * gae
-            returns.insert(0, gae + values[step])
+        returns = [[], []]
 
-        return np.array(returns)
+        for worker in range(self.n_workers):
+            values[worker] = values[worker] + next_values[worker]
+
+            for step in reversed(range(len(rewards[worker]))):
+                delta = rewards[worker][step] + gamma * (values[worker][step + 1]) * (1 - dones[worker][step]) - values[worker][step]
+                gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
+                returns[worker].insert(0, gae + values[worker][step])
+
+        return np.vstack(returns).reshape((len(returns[0]) + len((returns[1]))), 1)
 
     def calculate_ratio(self, states, actions):
         new_policy_log = self.calculate_log_probs(self.agent.new_policy, states, actions)
