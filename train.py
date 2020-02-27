@@ -35,6 +35,7 @@ class Train:
     def train(self, states, actions, rewards, dones, values, next_values):
         returns = self.get_gae(rewards, deepcopy(values), next_values, dones)
         advs = returns - np.vstack(values).reshape((sum([len(values[i]) for i in range(self.n_workers)]), 1))
+        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
 
         for epoch in range(self.epochs):
             for state, action, q_value, adv in self.choose_mini_batch(self.mini_batch_size,
@@ -48,12 +49,14 @@ class Train:
                 entropy = dist.entropy().mean()
                 new_log_prob = self.calculate_log_probs(self.agent.new_policy, state, action)
                 old_log_prob = self.calculate_log_probs(self.agent.old_policy, state, action)
-                ratio = torch.exp(new_log_prob) / (torch.exp(old_log_prob) + 1e-8)
+                # ratio = torch.exp(new_log_prob) / (torch.exp(old_log_prob) + 1e-8)
+                ratio = (new_log_prob - old_log_prob).exp()
 
                 actor_loss = self.compute_ac_loss(ratio, adv)
-                crtitic_loss = self.agent.critic_loss(q_value, value)
+                # crtitic_loss = self.agent.critic_loss(q_value, value)
+                critic_loss = (q_value - value).pow(2).mean()
 
-                total_loss = 1.0 * crtitic_loss + actor_loss - 0.01 * entropy
+                total_loss = 1.0 * critic_loss + actor_loss - 0.01 * entropy
                 self.agent.optimize(total_loss)
 
                 return total_loss, entropy, rewards
@@ -69,9 +72,9 @@ class Train:
 
             total_loss, entropy, rewards = self.train(states, actions, rewards, dones, values, next_values)
             self.equalize_policies()
-            # if self.episode_counter % 10 == 0:
-            evaluation_rewards = evaluate_model(self.agent, deepcopy(self.env))
-            self.print_logs(total_loss, entropy, evaluation_rewards)
+            if self.episode_counter % 10 == 0:
+                evaluation_rewards = evaluate_model(self.agent, deepcopy(self.env))
+                self.print_logs(total_loss, entropy, evaluation_rewards)
         self.agent.save_weights()
 
     def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lam=0.95):
@@ -108,7 +111,7 @@ class Train:
 
     def print_logs(self, total_loss, entropy, rewards):
 
-        if self.episode_counter == 1:
+        if self.episode_counter == 10:
             self.global_running_r.append(rewards)
         else:
             self.global_running_r.append(self.global_running_r[-1] * 0.99 + rewards * 0.01)
