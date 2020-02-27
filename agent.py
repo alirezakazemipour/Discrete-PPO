@@ -34,7 +34,7 @@ class Agent:
     def optimize(self, loss):
         self.optimizer.zero_grad()
         loss.backward()
-        # torch.nn.utils.clip_grad_norm_(self.new_policy.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(self.new_policy.parameters(), 0.5)
         self.optimizer.step()
 
     def set_weights(self):

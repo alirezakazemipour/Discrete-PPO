@@ -53,7 +53,7 @@ class Train:
                 actor_loss = self.compute_ac_loss(ratio, adv)
                 crtitic_loss = self.agent.critic_loss(q_value, value)
 
-                total_loss = 0.5 * crtitic_loss + actor_loss - 0.01 * entropy
+                total_loss = 1.0 * crtitic_loss + actor_loss - 0.01 * entropy
                 self.agent.optimize(total_loss)
 
                 return total_loss, entropy, rewards
