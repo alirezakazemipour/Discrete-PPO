@@ -27,7 +27,7 @@ if __name__ == "__main__":
                     max_steps=max_steps,
                     max_episode=max_episode,
                     epochs=epochs,
-                    mini_batch_size=256,
+                    mini_batch_size=32 * n_workers,
                     epsilon=clip_range
                     )
     trainer.step()
