@@ -5,6 +5,8 @@ import numpy as np
 from torch import multiprocessing as mp
 from test import evaluate_model
 from copy import deepcopy
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 
 
 class Train:
@@ -20,6 +22,7 @@ class Train:
         self.epochs = epochs
         self.mini_batch_size = mini_batch_size
         torch.cuda.empty_cache()
+        self.dir = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
         mp.set_start_method('spawn')
 
@@ -72,9 +75,9 @@ class Train:
 
             total_loss, entropy, rewards = self.train(states, actions, rewards, dones, values, next_values)
             self.equalize_policies()
-            if self.episode_counter % 10 == 0:
-                evaluation_rewards = evaluate_model(self.agent, deepcopy(self.env))
-                self.print_logs(total_loss, entropy, evaluation_rewards)
+            evaluation_rewards = evaluate_model(self.agent, deepcopy(self.env))
+            self.print_logs(total_loss, entropy, evaluation_rewards)
+            self.log(total_loss, entropy, rewards)
         self.agent.save_weights()
 
     def get_gae(self, rewards, values, next_values, dones, gamma=0.99, lam=0.95):
@@ -85,7 +88,8 @@ class Train:
             values[worker] = values[worker] + next_values[worker]
             gae = 0
             for step in reversed(range(len(rewards[worker]))):
-                delta = rewards[worker][step] + gamma * (values[worker][step + 1]) * (1 - dones[worker][step]) - values[worker][step]
+                delta = rewards[worker][step] + gamma * (values[worker][step + 1]) * (1 - dones[worker][step]) - \
+                        values[worker][step]
                 gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
                 returns[worker].insert(0, gae + values[worker][step])
 
@@ -111,13 +115,22 @@ class Train:
 
     def print_logs(self, total_loss, entropy, rewards):
 
-        if self.episode_counter == 10:
+        if self.episode_counter == 1:
             self.global_running_r.append(rewards)
         else:
             self.global_running_r.append(self.global_running_r[-1] * 0.99 + rewards * 0.01)
 
-        print(f"Ep:{self.episode_counter}| "
-              f"Ep_Reward:{rewards}| "
-              f"Running_reward:{self.global_running_r[-1]:3.3f}| "
-              f"Total_loss:{total_loss:3.3f}| "
-              f"Entropy:{entropy:3.3f}| ")
+        if self.episode_counter % 10 == 0:
+            print(f"Ep:{self.episode_counter}| "
+                  f"Ep_Reward:{rewards}| "
+                  f"Running_reward:{self.global_running_r[-1]:3.3f}| "
+                  f"Total_loss:{total_loss:3.3f}| "
+                  f"Entropy:{entropy:3.3f}| ")
+
+    def log(self, total_loss, entropy, rewards):
+
+        with SummaryWriter("./logs/" + self.dir) as writer:
+            writer.add_scalar("Loss", total_loss, self.episode_counter)
+            writer.add_scalar("Episode running reward", self.global_running_r[-1], self.episode_counter)
+            writer.add_scalar("Episode reward", rewards.mean(), self.episode_counter)
+            writer.add_scalar("Entropy", entropy, self.episode_counter)

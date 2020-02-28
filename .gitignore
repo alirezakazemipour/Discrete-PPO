@@ -16,6 +16,8 @@ eggs/
 .eggs/
 .idea/
 *.pth
+vid/
+logs/
 lib/
 lib64/
 parts/

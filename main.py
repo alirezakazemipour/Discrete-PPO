@@ -9,12 +9,12 @@ state_shape = test_env.observation_space.shape
 n_actions = test_env.action_space.n
 
 stack_shape = (84, 84, 4)
-n_workers = 3
-max_steps = 128#test_env._max_episode_steps
+n_workers = 1
+max_steps = 128  # test_env._max_episode_steps
 max_episode = 500
 lr = 3e-4
 epochs = 3
-clip_range=0.2
+clip_range = 0.2
 
 if __name__ == "__main__":
     print(f"state shape:{state_shape}\n"
@@ -32,5 +32,5 @@ if __name__ == "__main__":
                     )
     trainer.step()
 
-#Todo
-#correct gae horizon
+# Todo
+# correct gae horizon
