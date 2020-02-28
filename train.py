@@ -56,7 +56,6 @@ class Train:
                 ratio = (new_log_prob - old_log_prob).exp()
 
                 actor_loss = self.compute_ac_loss(ratio, adv)
-                # crtitic_loss = self.agent.critic_loss(q_value, value)
                 critic_loss = (q_value - value).pow(2).mean()
 
                 total_loss = 1.0 * critic_loss + actor_loss - 0.01 * entropy
@@ -120,7 +119,7 @@ class Train:
         else:
             self.global_running_r.append(self.global_running_r[-1] * 0.99 + rewards * 0.01)
 
-        if self.episode_counter % 10 == 0:
+        if self.episode_counter % 200 == 0:
             print(f"Ep:{self.episode_counter}| "
                   f"Ep_Reward:{rewards}| "
                   f"Running_reward:{self.global_running_r[-1]:3.3f}| "
