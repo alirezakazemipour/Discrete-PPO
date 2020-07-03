@@ -1,2 +1,2 @@
 # PPO
-Implemetation of the proximal policy optimization on the Breakout environment. 
+Implemetation of the proximal policy optimization on Atari environments. 
