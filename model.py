@@ -11,24 +11,30 @@ class Model(nn.Module):
         self.n_actions = n_actions
 
         w, h, c = state_shape
+        #  https://github.com/openai/baselines/blob/master/baselines/ppo1/cnn_policy.py
+        self.conv1 = nn.Conv2d(in_channels=c, out_channels=16, kernel_size=8, stride=4)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
+        # self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
 
-        self.conv1 = nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1)
+        conv_out_w = self.conv_shape(self.conv_shape(w, 8, 4), 4, 2)
+        conv_out_h = self.conv_shape(self.conv_shape(h, 8, 4), 4, 2)
+        flatten_size = conv_out_w * conv_out_h * 16
 
-        flatten_num = (self.conv_shape(self.conv_shape(self.conv_shape(w, 8, 4), 4, 2), 3, 1) ** 2) * 64
-
-        self.fc = nn.Linear(in_features=flatten_num, out_features=512)
-        self.v = nn.Linear(in_features=512, out_features=1)
-        self.policy = nn.Linear(in_features=512, out_features=self.n_actions)
+        self.fc = nn.Linear(in_features=flatten_size, out_features=256)
+        self.value = nn.Linear(in_features=256, out_features=1)
+        self.policy = nn.Linear(in_features=256, out_features=self.n_actions)
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
-                nn.init.kaiming_normal_(layer.weight)
+                nn.init.kaiming_normal_(layer.weight, nonlinearity="relu")
                 layer.bias.data.zero_()
-            elif isinstance(layer, nn.Linear):
-                nn.init.xavier_normal_(layer.weight)
-                layer.bias.data.zero_()
+
+        nn.init.kaiming_normal_(self.fc.weight, nonlinearity="relu")
+        self.fc.bias.data.zero_()
+        nn.init.xavier_uniform_(self.value.weight)
+        self.value.bias.data.zero_()
+        nn.init.xavier_uniform_(self.policy.weight)
+        self.policy.bias.data.zero_()
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
