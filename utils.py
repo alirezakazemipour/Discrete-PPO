@@ -35,11 +35,16 @@ def make_atari(env_id):
     return env
 
 
-class NoopResetEnv(gym.Wrapper):
+class NoopResetEnv:
     def __init__(self, env):
-        gym.Wrapper.__init__(self, env)
         self.noop_max = 30
         self.noop_action = 0
+        self.env = env
+        self.unwrapped = self.env.unwrapped
+        self.observation_space = env.observation_space
+        self.action_space = self.env.action_space
+        self._max_episode_steps = self.env._max_episode_steps
+        self.ale = self.env.ale
         assert self.env.unwrapped.get_action_meanings()[0] == 'NOOP'
         self.observation_space = self.env.observation_space
 
@@ -59,11 +64,23 @@ class NoopResetEnv(gym.Wrapper):
     def step(self, action):
         return self.env.step(action)
 
+    def render(self):
+        self.env.render()
 
-class RepeatActionEnv(gym.Wrapper):
+    def close(self):
+        self.env.close()
+
+    def seed(self, seed):
+        self.env.seed(seed)
+
+
+class RepeatActionEnv:
     def __init__(self, env):
-        gym.Wrapper.__init__(self, env)
         self.env = env
+        self.unwrapped = self.env.unwrapped
+        self.observation_space = env.observation_space
+        self.action_space = self.env.action_space
+        self._max_episode_steps = self.env._max_episode_steps
         self.ale = self.env.ale
         self.successive_frame = np.zeros((2,) + self.env.observation_space.shape, dtype=np.uint8)
 
@@ -85,11 +102,24 @@ class RepeatActionEnv(gym.Wrapper):
         state = self.successive_frame.max(axis=0)
         return state, reward, done, info
 
+    def render(self):
+        self.env.render()
 
-class EpisodicLifeEnv(gym.Wrapper):
+    def close(self):
+        self.env.close()
+
+    def seed(self, seed):
+        self.env.seed(seed)
+
+
+class EpisodicLifeEnv:
     def __init__(self, env):
-        gym.Wrapper.__init__(self, env)
         self.env = env
+        self.ale = self.env.ale
+        self.unwrapped = self.env.unwrapped
+        self.observation_space = env.observation_space
+        self.action_space = self.env.action_space
+        self._max_episode_steps = self.env._max_episode_steps
         self.natural_done = True
         self.lives = 0
 
@@ -111,11 +141,23 @@ class EpisodicLifeEnv(gym.Wrapper):
         self.lives = self.env.ale.lives()
         return state
 
+    def render(self):
+        self.env.render()
 
-class FireResetEnv(gym.Wrapper):
+    def close(self):
+        self.env.close()
+
+    def seed(self, seed):
+        self.env.seed(seed)
+
+
+class FireResetEnv:
     def __init__(self, env):
-        gym.Wrapper.__init__(self, env)
         self.env = env
+        self.observation_space = env.observation_space
+        self.ale = self.env.ale
+        self.action_space = self.env.action_space
+        self._max_episode_steps = self.env._max_episode_steps
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
@@ -131,3 +173,12 @@ class FireResetEnv(gym.Wrapper):
         if done:
             self.env.reset()
         return state
+
+    def render(self):
+        self.env.render()
+
+    def close(self):
+        self.env.close()
+
+    def seed(self, seed):
+        self.env.seed(seed)
