@@ -5,6 +5,9 @@ import numpy as np
 from brain import Brain
 import gym
 from tqdm import tqdm
+import time
+from torch.utils.tensorboard import SummaryWriter
+
 
 env_name = "PongNoFrameskip-v4"
 test_env = gym.make(env_name)
@@ -37,15 +40,17 @@ def apply_actions(worker, action):
 
 if __name__ == '__main__':
     workers = [Worker(i, env_name, state_shape) for i in range(n_workers)]
-    brain = Brain(state_shape, n_actions, device, n_workers, epochs, clip_range, lr)
+    brain = Brain(state_shape, n_actions, device, n_workers, epochs, iterations, clip_range, lr)
+    running_reward = 0
     for iteration in range(iterations):
+        start_time = time.time()
         total_states = []
         total_actions = []
         total_rewards = []
         total_dones = []
         total_next_states = []
         total_values = []
-        for step in tqdm(range(T)):
+        for step in range(T):
             states = []
             rewards = []
             dones = []
@@ -83,4 +88,31 @@ if __name__ == '__main__':
         total_values = np.vstack(total_values).reshape((n_workers, -1))
         total_rewards = np.vstack(total_rewards).reshape((n_workers, -1))
         total_dones = np.vstack(total_dones).reshape((n_workers, -1))
-        brain.train(total_states, total_actions, total_rewards, total_dones, total_values, next_values)
+        total_loss, entropy = brain.train(total_states, total_actions, total_rewards, total_dones, total_values, next_values)
+        brain.equalize_policies()
+        brain.schedule_lr()
+        brain.schedule_clip_range(iteration)
+
+        if iteration == 0:
+            running_reward = total_rewards.mean()
+        else:
+            running_reward = running_reward * 0.99 + total_rewards.mean() * 0.01
+
+        if iteration % 2 == 0:
+            print(f"Iter:{iteration}| "
+                  f"Mean_Reward:{total_rewards.mean():.3f}| "
+                  f"Running_reward:{running_reward:.3f}| "
+                  f"Total_loss:{total_loss:.3f}| "
+                  f"Entropy:{entropy:.3f}| "
+                  # f"Actor_Loss:{actor_loss:3.3f}| "
+                  # f"Critic_Loss:{critic_loss:3.3f}| "
+                  f"Iter_duration:{time.time() - start_time:.3f}| "
+                  f"lr:{brain.scheduler.get_last_lr()}")
+            brain.save_weights()
+
+        with SummaryWriter(env_name + "/logs") as writer:
+            writer.add_scalar("running reward", running_reward, iteration)
+            writer.add_scalar("mean envs reward", total_rewards.mean(), iteration)
+            writer.add_scalar("loss", total_loss, iteration)
+            writer.add_scalar("entropy", entropy, iteration)
+

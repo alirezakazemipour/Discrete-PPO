@@ -3,16 +3,18 @@ import torch
 from torch import from_numpy
 import numpy as np
 from torch.optim.adam import Adam
+from torch.optim.lr_scheduler import LambdaLR
 
 
 class Brain:
-    def __init__(self, state_shape, n_actions, device, n_workers, epochs, epsilon, lr):
+    def __init__(self, state_shape, n_actions, device, n_workers, epochs, n_iters, epsilon, lr):
         self.state_shape = state_shape
         self.n_actions = n_actions
         self.device = device
         self.n_workers = n_workers
         self.mini_batch_size = 32 * self.n_workers
         self.epochs = epochs
+        self.n_iters = n_iters
         self.epsilon = epsilon
         self.lr = lr
 
@@ -21,6 +23,8 @@ class Brain:
         self.old_policy.load_state_dict(self.current_policy.state_dict())
 
         self.optimizer = Adam(self.current_policy.parameters(), lr=self.lr)
+        self._schedule_fn = lambda step: max(1.0 - float(step / self.n_iters), 0)
+        self.scheduler = LambdaLR(self.optimizer, lr_lambda=self._schedule_fn)
 
     def get_action_and_values(self, state):
         state = from_numpy(state).byte().permute([0, 3, 1, 2]).to(self.device)
@@ -59,15 +63,20 @@ class Brain:
                 actor_loss = self.compute_ac_loss(ratio, adv)
                 critic_loss = (q_value - value).pow(2).mean()
 
-                total_loss = 1.0 * critic_loss + actor_loss - 0.01 * entropy
-                self.equalize_policies()
+                total_loss = critic_loss + actor_loss - 0.01 * entropy
                 self.optimize(total_loss)
 
-                return total_loss, entropy, rewards
+                return total_loss.item(), entropy.item()
 
     def equalize_policies(self):
         for old_params, new_params in zip(self.old_policy.parameters(), self.current_policy.parameters()):
             old_params.data.copy_(new_params.data)
+
+    def schedule_lr(self):
+        self.scheduler.step()
+
+    def schedule_clip_range(self, iter):
+        self.epsilon *= max(1.0 - float(iter / self.n_iters), 0)
 
     def optimize(self, loss):
         self.optimizer.zero_grad()
@@ -83,18 +92,13 @@ class Brain:
             extended_values[worker] = np.append(values[worker], next_values[worker])
             gae = 0
             for step in reversed(range(len(rewards[worker]))):
-                delta = rewards[worker][step] + gamma * (extended_values[worker][step + 1]) * (1 - dones[worker][step]) - \
+                delta = rewards[worker][step] + gamma * (extended_values[worker][step + 1]) * (
+                            1 - dones[worker][step]) - \
                         extended_values[worker][step]
                 gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
                 returns[worker].insert(0, gae + extended_values[worker][step])
 
         return np.vstack(returns).reshape((sum([len(returns[i]) for i in range(self.n_workers)]), 1))
-
-    def calculate_ratio(self, states, actions):
-        new_policy_log = self.calculate_log_probs(self.current_policy, states, actions)
-        old_policy_log = self.calculate_log_probs(self.old_policy, states, actions)
-        ratio = torch.exp(new_policy_log) / (torch.exp(old_policy_log) + 1e-8)
-        return ratio
 
     @staticmethod
     def calculate_log_probs(model, states, actions):
@@ -107,3 +111,6 @@ class Brain:
         loss = torch.min(r_new, clamped_r)
         loss = - loss.mean()
         return loss
+
+    def save_weights(self):
+        torch.save(self.current_policy.state_dict(), "weights.pth")
