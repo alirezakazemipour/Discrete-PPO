@@ -18,7 +18,7 @@ class Model(nn.Module):
 
         conv_out_w = self.conv_shape(self.conv_shape(w, 8, 4), 4, 2)
         conv_out_h = self.conv_shape(self.conv_shape(h, 8, 4), 4, 2)
-        flatten_size = conv_out_w * conv_out_h * 16
+        flatten_size = conv_out_w * conv_out_h * 32
 
         self.fc = nn.Linear(in_features=flatten_size, out_features=256)
         self.value = nn.Linear(in_features=256, out_features=1)
@@ -36,13 +36,14 @@ class Model(nn.Module):
         nn.init.xavier_uniform_(self.policy.weight)
         self.policy.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, inputs):
+        x = inputs / 255.
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
-        x = F.relu((self.conv3(x)))
+        # x = F.relu((self.conv3(x)))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc(x))
-        value = self.v(x)
+        value = self.value(x)
         # pi = F.softmax(self.policy(x), dim=1)
         dist = Categorical(F.softmax(self.policy(x), dim=1))
 
