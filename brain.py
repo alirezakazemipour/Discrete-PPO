@@ -22,7 +22,7 @@ class Brain:
         self.old_policy = Model(self.state_shape, self.n_actions).to(self.device)
         self.old_policy.load_state_dict(self.current_policy.state_dict())
 
-        self.optimizer = Adam(self.current_policy.parameters(), lr=self.lr)
+        self.optimizer = Adam(self.current_policy.parameters(), lr=self.lr, eps=1e-5)
         self._schedule_fn = lambda step: max(1.0 - float(step / self.n_iters), 0)
         self.scheduler = LambdaLR(self.optimizer, lr_lambda=self._schedule_fn)
 
@@ -34,24 +34,25 @@ class Brain:
         return action, value.detach().cpu().numpy()
 
     @staticmethod
-    def choose_mini_batch(mini_batch_size, states, actions, returns, advs):
+    def choose_mini_batch(mini_batch_size, states, actions, returns, advs, values):
         full_batch_size = len(states)
         for _ in range(full_batch_size // mini_batch_size):
             idxes = np.random.randint(0, full_batch_size, mini_batch_size)
-            yield states[idxes], actions[idxes], returns[idxes], advs[idxes]
+            yield states[idxes], actions[idxes], returns[idxes], advs[idxes], values[idxes]
 
     def train(self, states, actions, rewards, dones, values, next_values):
         returns = self.get_gae(rewards, values.copy(), next_values, dones)
         advs = returns - np.vstack(values).reshape((sum([len(values[i]) for i in range(self.n_workers)]), 1))
         advs = (advs - advs.mean()) / (advs.std() + 1e-8)
-
+        values = np.vstack(values).reshape((sum([len(values[i]) for i in range(self.n_workers)]), 1))
         for epoch in range(self.epochs):
-            for state, action, q_value, adv in self.choose_mini_batch(self.mini_batch_size,
-                                                                      states, actions, returns, advs):
+            for state, action, q_value, adv, old_value in self.choose_mini_batch(self.mini_batch_size,
+                                                                      states, actions, returns, advs, values):
                 state = torch.ByteTensor(state).permute([0, 3, 1, 2]).to(self.device)
                 action = torch.Tensor(action).to(self.device)
                 adv = torch.Tensor(adv).to(self.device)
                 q_value = torch.Tensor(q_value).to(self.device).view((self.mini_batch_size, 1))
+                old_value = torch.Tensor(old_value).to(self.device)
 
                 dist, value = self.current_policy(state)
                 entropy = dist.entropy().mean()
@@ -59,9 +60,12 @@ class Brain:
                 with torch.no_grad():
                     old_log_prob = self.calculate_log_probs(self.old_policy, state, action)
                 ratio = (new_log_prob - old_log_prob).exp()
-
                 actor_loss = self.compute_ac_loss(ratio, adv)
-                critic_loss = (q_value - value).pow(2).mean()
+
+                clipped_value = old_value + torch.clamp(value - old_value, -self.epsilon, self.epsilon)
+                clipped_v_loss = (clipped_value - q_value).pow(2)
+                unclipped_v_loss = (value - q_value).pow(2)
+                critic_loss = 0.5 * torch.max(clipped_v_loss, unclipped_v_loss).mean()
 
                 total_loss = critic_loss + actor_loss - 0.01 * entropy
                 self.optimize(total_loss)

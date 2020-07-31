@@ -15,7 +15,7 @@ n_actions = test_env.action_space.n
 n_workers = 8
 state_shape = (84, 84, 4)
 device = "cuda"
-iterations = 1000
+iterations = int(1e6)
 T = 128
 epochs = 3
 lr = 2.5e-4
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         else:
             running_reward = running_reward * 0.99 + total_rewards.mean() * 0.01
 
-        if iteration % 2 == 0:
+        if iteration % 100 == 0:
             print(f"Iter:{iteration}| "
                   f"Mean_Reward:{total_rewards.mean():.3f}| "
                   f"Running_reward:{running_reward:.3f}| "
@@ -107,7 +107,8 @@ if __name__ == '__main__':
                   # f"Actor_Loss:{actor_loss:3.3f}| "
                   # f"Critic_Loss:{critic_loss:3.3f}| "
                   f"Iter_duration:{time.time() - start_time:.3f}| "
-                  f"lr:{brain.scheduler.get_last_lr()}")
+                  f"lr:{brain.scheduler.get_last_lr()} |"
+                  f"clip_range:{brain.epsilon:.3f}")
             brain.save_weights()
 
         with SummaryWriter(env_name + "/logs") as writer:
