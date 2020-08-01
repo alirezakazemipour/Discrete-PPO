@@ -26,12 +26,13 @@ class Brain:
         self._schedule_fn = lambda step: max(1.0 - float(step / self.n_iters), 0)
         self.scheduler = LambdaLR(self.optimizer, lr_lambda=self._schedule_fn)
 
-    def get_action_and_values(self, state):
+    def get_actions_and_values(self, state):
+        state = np.expand_dims(state, 0)
         state = from_numpy(state).byte().permute([0, 3, 1, 2]).to(self.device)
         with torch.no_grad():
             dist, value = self.current_policy(state)
             action = dist.sample().cpu().numpy()
-        return action, value.detach().cpu().numpy()
+        return action.squeeze(), value.detach().cpu().numpy().squeeze()
 
     @staticmethod
     def choose_mini_batch(mini_batch_size, states, actions, returns, advs, values):
@@ -42,16 +43,17 @@ class Brain:
 
     def train(self, states, actions, rewards, dones, values, next_values):
         returns = self.get_gae(rewards, values.copy(), next_values, dones)
-        advs = returns - np.vstack(values).reshape((sum([len(values[i]) for i in range(self.n_workers)]), 1))
+        values = np.vstack(values).reshape((len(values[0]) * self.n_workers, ))
+        advs = returns - values
         advs = (advs - advs.mean()) / (advs.std() + 1e-8)
-        values = np.vstack(values).reshape((sum([len(values[i]) for i in range(self.n_workers)]), 1))
         for epoch in range(self.epochs):
             for state, action, q_value, adv, old_value in self.choose_mini_batch(self.mini_batch_size,
-                                                                      states, actions, returns, advs, values):
+                                                                                 states, actions, returns, advs,
+                                                                                 values):
                 state = torch.ByteTensor(state).permute([0, 3, 1, 2]).to(self.device)
                 action = torch.Tensor(action).to(self.device)
                 adv = torch.Tensor(adv).to(self.device)
-                q_value = torch.Tensor(q_value).to(self.device).view((self.mini_batch_size, 1))
+                q_value = torch.Tensor(q_value).to(self.device)
                 old_value = torch.Tensor(old_value).to(self.device)
 
                 dist, value = self.current_policy(state)
@@ -62,15 +64,15 @@ class Brain:
                 ratio = (new_log_prob - old_log_prob).exp()
                 actor_loss = self.compute_ac_loss(ratio, adv)
 
-                clipped_value = old_value + torch.clamp(value - old_value, -self.epsilon, self.epsilon)
+                clipped_value = old_value + torch.clamp(value.squeeze() - old_value, -self.epsilon, self.epsilon)
                 clipped_v_loss = (clipped_value - q_value).pow(2)
-                unclipped_v_loss = (value - q_value).pow(2)
+                unclipped_v_loss = (value.squeeze() - q_value).pow(2)
                 critic_loss = 0.5 * torch.max(clipped_v_loss, unclipped_v_loss).mean()
 
                 total_loss = critic_loss + actor_loss - 0.01 * entropy
                 self.optimize(total_loss)
 
-                return total_loss.item(), entropy.item()
+        return total_loss.item(), entropy.item()
 
     def equalize_policies(self):
         for old_params, new_params in zip(self.old_policy.parameters(), self.current_policy.parameters()):
@@ -96,13 +98,12 @@ class Brain:
             extended_values[worker] = np.append(values[worker], next_values[worker])
             gae = 0
             for step in reversed(range(len(rewards[worker]))):
-                delta = rewards[worker][step] + gamma * (extended_values[worker][step + 1]) * (
-                            1 - dones[worker][step]) - \
-                        extended_values[worker][step]
+                delta = rewards[worker][step] + gamma * (extended_values[worker][step + 1]) * (1 - dones[worker][step])\
+                        - extended_values[worker][step]
                 gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
                 returns[worker].insert(0, gae + extended_values[worker][step])
 
-        return np.vstack(returns).reshape((sum([len(returns[i]) for i in range(self.n_workers)]), 1))
+        return np.vstack(returns).reshape((len(returns[0]) * self.n_workers,))
 
     @staticmethod
     def calculate_log_probs(model, states, actions):
