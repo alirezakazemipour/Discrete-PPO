@@ -1,5 +1,6 @@
 from runner import Worker
 from concurrent import futures
+import threading
 import cv2
 import numpy as np
 from brain import Brain
@@ -45,8 +46,16 @@ if __name__ == '__main__':
         total_values = np.zeros((n_workers, T))
         next_values = np.zeros(n_workers)
     
-        with futures.ThreadPoolExecutor(n_workers) as p:
-            p.map(run_workers, workers)
+        # with futures.ThreadPoolExecutor(n_workers) as p:
+        #     p.map(run_workers, workers)
+        threads = []
+        for worker in workers:
+            t = threading.Thread(target=run_workers, args=(worker,))
+            threads.append(t)
+            t.start()
+
+        for thread in threads:
+            thread.join()
     
         for i, worker in enumerate(workers):
             _, next_values[i] = brain.get_actions_and_values(worker.next_states[-1])
