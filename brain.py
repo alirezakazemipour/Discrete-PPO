@@ -33,7 +33,7 @@ class Brain:
         with torch.no_grad():
             dist, value = self.current_policy(state)
             action = dist.sample().cpu().numpy()
-        return action.squeeze(), value.detach().cpu().numpy().squeeze()
+        return action, value.detach().cpu().numpy().squeeze()
 
     @staticmethod
     def choose_mini_batch(mini_batch_size, states, actions, returns, advs, values):
@@ -120,3 +120,9 @@ class Brain:
 
     def save_weights(self):
         torch.save(self.current_policy.state_dict(), "weights.pth")
+
+    def load_weights(self):
+        self.current_policy.load_state_dict(torch.load("weights.pth"))
+
+    def set_to_eval_mode(self):
+        self.current_policy.eval()
