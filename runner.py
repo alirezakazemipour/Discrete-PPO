@@ -27,10 +27,10 @@ class Worker:
 
     def step(self, conn):
         while True:
-            stacked_states_copy = self._stacked_states.copy()
-            conn.send(stacked_states_copy)
-            action, value = conn.recv()
+            conn.send(self._stacked_states)
+            action = conn.recv()
             next_state, r, d, _ = self.env.step(action)
+            # self.render()
             self._stacked_states = stack_states(self._stacked_states, next_state, False)
             if d:
                 self.reset()

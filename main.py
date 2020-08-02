@@ -12,7 +12,7 @@ from play import Play
 env_name = "PongNoFrameskip-v4"
 test_env = gym.make(env_name)
 n_actions = test_env.action_space.n
-n_workers = 2
+n_workers = 8
 state_shape = (84, 84, 4)
 device = "cuda"
 iterations = int(1e6)
@@ -23,10 +23,6 @@ clip_range = 0.1
 
 
 def run_workers(worker, conn):
-    # print('parent process:', os.getppid())
-    # print('process id:', os.getpid())
-    # print(threading.get_ident())
-    # for _ in range(T):
     worker.step(conn)
 
 
@@ -34,13 +30,12 @@ if __name__ == '__main__':
     brain = Brain(state_shape, n_actions, device, n_workers, epochs, iterations, clip_range, lr)
     workers = [Worker(i, state_shape, env_name, brain, T) for i in range(n_workers)]
     running_reward = 0
-    processes = []
+
     parents = []
     for worker in workers:
         parent_conn, child_conn = Pipe()
         p = Process(target=run_workers, args=(worker, child_conn,))
         parents.append(parent_conn)
-        processes.append(p)
         p.start()
 
     for iteration in range(iterations):
@@ -56,14 +51,16 @@ if __name__ == '__main__':
         for t in range(T):
             for worker_id, parent in enumerate(parents):
                 s = parent.recv()
-                a, v = brain.get_actions_and_values(s)
-                parent.send((a, v))
-                s_, r, d, _ = parent.recv()
                 total_states[worker_id, t] = s
-                total_actions[worker_id, t] = a
+
+            total_actions[:, t], total_values[:, t] = brain.get_actions_and_values(total_states[:, t], batch=True)
+            for parent, a in zip(parents, total_actions[:, t]):
+                parent.send(int(a))
+
+            for worker_id, parent in enumerate(parents):
+                s_, r, d, _ = parent.recv()
                 total_rewards[worker_id, t] = r
                 total_dones[worker_id, t] = d
-                total_values[worker_id, t] = v
                 next_states[worker_id] = s_
         _, next_values = brain.get_actions_and_values(next_states, batch=True)
 
