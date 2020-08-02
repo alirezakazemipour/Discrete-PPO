@@ -26,8 +26,9 @@ class Brain:
         self._schedule_fn = lambda step: max(1.0 - float(step / self.n_iters), 0)
         self.scheduler = LambdaLR(self.optimizer, lr_lambda=self._schedule_fn)
 
-    def get_actions_and_values(self, state):
-        state = np.expand_dims(state, 0)
+    def get_actions_and_values(self, state, batch=False):
+        if not batch:
+            state = np.expand_dims(state, 0)
         state = from_numpy(state).byte().permute([0, 3, 1, 2]).to(self.device)
         with torch.no_grad():
             dist, value = self.current_policy(state)
@@ -43,7 +44,7 @@ class Brain:
 
     def train(self, states, actions, rewards, dones, values, next_values):
         returns = self.get_gae(rewards, values.copy(), next_values, dones)
-        values = np.vstack(values).reshape((len(values[0]) * self.n_workers, ))
+        values = np.vstack(values).reshape((len(values[0]) * self.n_workers,))
         advs = returns - values
         advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for epoch in range(self.epochs):
@@ -98,7 +99,7 @@ class Brain:
             extended_values[worker] = np.append(values[worker], next_values[worker])
             gae = 0
             for step in reversed(range(len(rewards[worker]))):
-                delta = rewards[worker][step] + gamma * (extended_values[worker][step + 1]) * (1 - dones[worker][step])\
+                delta = rewards[worker][step] + gamma * (extended_values[worker][step + 1]) * (1 - dones[worker][step]) \
                         - extended_values[worker][step]
                 gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
                 returns[worker].insert(0, gae + extended_values[worker][step])

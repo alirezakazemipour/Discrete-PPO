@@ -1,7 +1,5 @@
 from runner import Worker
-from concurrent import futures
-import threading
-import cv2
+from multiprocessing import Process, Pipe
 import numpy as np
 from brain import Brain
 import gym
@@ -11,11 +9,10 @@ from torch.utils.tensorboard import SummaryWriter
 from test_policy import evaluate_policy
 from play import Play
 
-
 env_name = "PongNoFrameskip-v4"
 test_env = gym.make(env_name)
 n_actions = test_env.action_space.n
-n_workers = 8
+n_workers = 2
 state_shape = (84, 84, 4)
 device = "cuda"
 iterations = int(1e6)
@@ -25,18 +22,27 @@ lr = 2.5e-4
 clip_range = 0.1
 
 
-def run_workers(worker):
+def run_workers(worker, conn):
     # print('parent process:', os.getppid())
     # print('process id:', os.getpid())
     # print(threading.get_ident())
-    for _ in range(T):
-        worker.step()
+    # for _ in range(T):
+    worker.step(conn)
 
 
 if __name__ == '__main__':
     brain = Brain(state_shape, n_actions, device, n_workers, epochs, iterations, clip_range, lr)
     workers = [Worker(i, state_shape, env_name, brain, T) for i in range(n_workers)]
     running_reward = 0
+    processes = []
+    parents = []
+    for worker in workers:
+        parent_conn, child_conn = Pipe()
+        p = Process(target=run_workers, args=(worker, child_conn,))
+        parents.append(parent_conn)
+        processes.append(p)
+        p.start()
+
     for iteration in range(iterations):
         start_time = time.time()
         total_states = np.zeros((n_workers, T,) + state_shape)
@@ -44,32 +50,23 @@ if __name__ == '__main__':
         total_rewards = np.zeros((n_workers, T))
         total_dones = np.zeros((n_workers, T))
         total_values = np.zeros((n_workers, T))
+        next_states = np.zeros((n_workers,) + state_shape)
         next_values = np.zeros(n_workers)
-    
-        # with futures.ThreadPoolExecutor(n_workers) as p:
-        #     p.map(run_workers, workers)
-        threads = []
-        for worker in workers:
-            t = threading.Thread(target=run_workers, args=(worker,))
-            threads.append(t)
-            t.start()
 
-        for thread in threads:
-            thread.join()
-    
-        for i, worker in enumerate(workers):
-            _, next_values[i] = brain.get_actions_and_values(worker.next_states[-1])
-            worker.next_states.clear()
-            total_states[i] = np.asarray(worker.states)
-            worker.states.clear()
-            total_actions[i] = np.asarray(worker.actions)
-            worker.actions.clear()
-            total_values[i] = np.asarray(worker.values)
-            worker.values.clear()
-            total_rewards[i] = np.asarray(worker.rewards)
-            worker.rewards.clear()
-            total_dones[i] = np.asarray(worker.dones)
-            worker.dones.clear()
+        for t in range(T):
+            for worker_id, parent in enumerate(parents):
+                s = parent.recv()
+                a, v = brain.get_actions_and_values(s)
+                parent.send((a, v))
+                s_, r, d, _ = parent.recv()
+                total_states[worker_id, t] = s
+                total_actions[worker_id, t] = a
+                total_rewards[worker_id, t] = r
+                total_dones[worker_id, t] = d
+                total_values[worker_id, t] = v
+                next_states[worker_id] = s_
+        _, next_values = brain.get_actions_and_values(next_states, batch=True)
+
         total_states = total_states.reshape((n_workers * T,) + state_shape)
         total_actions = total_actions.reshape(n_workers * T)
         total_loss, entropy = brain.train(total_states, total_actions, total_rewards,
@@ -78,12 +75,12 @@ if __name__ == '__main__':
         brain.schedule_lr()
         # brain.schedule_clip_range(iteration)
         episode_reward = evaluate_policy(env_name, brain, state_shape)
-    
+
         if iteration == 0:
             running_reward = episode_reward
         else:
             running_reward = 0.99 * running_reward + 0.01 * episode_reward
-    
+
         if iteration % 50 == 0:
             print(f"Iter: {iteration}| "
                   f"Ep_reward: {episode_reward:.3f}| "
@@ -94,10 +91,9 @@ if __name__ == '__main__':
                   f"Lr: {brain.scheduler.get_last_lr()}| "
                   f"Clip_range:{brain.epsilon:.3f}")
             brain.save_weights()
-    
+
         with SummaryWriter(env_name + "/logs") as writer:
             writer.add_scalar("running reward", running_reward, iteration)
             writer.add_scalar("episode reward", episode_reward, iteration)
             writer.add_scalar("loss", total_loss, iteration)
             writer.add_scalar("entropy", entropy, iteration)
-
