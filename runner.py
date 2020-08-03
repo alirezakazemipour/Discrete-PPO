@@ -3,12 +3,10 @@ from collections import deque
 
 
 class Worker:
-    def __init__(self, id, state_shape, env_name, brain, horizon):
+    def __init__(self, id, state_shape, env_name):
         self.id = id
         self.env_name = env_name
         self.state_shape = state_shape
-        self.brain = brain
-        self.horizon = horizon
         self.env = make_atari(self.env_name)
         # self.env = gym.make(self.env_name)
         self._stacked_states = np.zeros(self.state_shape, dtype=np.uint8)

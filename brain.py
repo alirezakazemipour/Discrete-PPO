@@ -15,7 +15,8 @@ class Brain:
         self.mini_batch_size = 32 * self.n_workers
         self.epochs = epochs
         self.n_iters = n_iters
-        self.epsilon = epsilon
+        self.initial_epsilon = epsilon
+        self.epsilon = self.initial_epsilon
         self.lr = lr
 
         self.current_policy = Model(self.state_shape, self.n_actions).to(self.device)
@@ -83,7 +84,7 @@ class Brain:
         self.scheduler.step()
 
     def schedule_clip_range(self, iter):
-        self.epsilon *= max(1.0 - float(iter / self.n_iters), 0)
+        self.epsilon = max(1.0 - float(iter / self.n_iters), 0) * self.initial_epsilon
 
     def optimize(self, loss):
         self.optimizer.zero_grad()
@@ -118,11 +119,25 @@ class Brain:
         loss = - loss.mean()
         return loss
 
-    def save_weights(self):
-        torch.save(self.current_policy.state_dict(), "weights.pth")
+    def save_params(self, iteration, running_reward):
+        torch.save({"current_policy_state_dict": self.current_policy.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict(),
+                    "scheduler_state_dict": self.scheduler.state_dict(),
+                    "iteration": iteration,
+                    "running_reward": running_reward,
+                    "clip_range": self.epsilon},
+                   "params.pth")
 
-    def load_weights(self):
-        self.current_policy.load_state_dict(torch.load("weights.pth"))
+    def load_params(self):
+        checkpoint = torch.load("params.pth")
+        self.current_policy.load_state_dict(checkpoint["current_policy_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        iteration = checkpoint["iteration"]
+        running_reward = checkpoint["running_reward"]
+        self.epsilon = checkpoint["clip_range"]
+
+        return running_reward, iteration
 
     def set_to_eval_mode(self):
         self.current_policy.eval()
