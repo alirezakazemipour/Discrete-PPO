@@ -24,6 +24,20 @@ def stack_states(stacked_frames, state, is_new_episode):
     return stacked_frames
 
 
+def explained_variance(ypred, y):
+    """
+    Computes fraction of variance that ypred explains about y.
+    Returns 1 - Var[y-ypred] / Var[y]
+    interpretation:
+        ev=0  =>  might as well have predicted zero
+        ev=1  =>  perfect prediction
+        ev<0  =>  worse than just predicting zero
+    """
+    assert y.ndim == 1 and ypred.ndim == 1
+    vary = np.var(y)
+    return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
+
+
 def make_atari(env_id):
     main_env = gym.make(env_id)
     assert 'NoFrameskip' in main_env.spec.id

@@ -75,12 +75,14 @@ if __name__ == '__main__':
 
         total_states = total_states.reshape((n_workers * T,) + state_shape)
         total_actions = total_actions.reshape(n_workers * T)
-        total_loss, entropy = brain.train(total_states, total_actions, total_rewards,
+        # Calculates if value function is a good predictor of the returns (ev > 1)
+        # or if it's just worse than predicting nothing (ev =< 0)
+        total_loss, entropy, ev = brain.train(total_states, total_actions, total_rewards,
                                           total_dones, total_values, next_values)
         brain.equalize_policies()
         brain.schedule_lr()
         brain.schedule_clip_range(iteration)
-        episode_reward = evaluate_policy(test_env, brain, state_shape)
+        episode_reward = evaluate_policy(env_name, brain, state_shape)
 
         if iteration == 1:
             running_reward = episode_reward
@@ -92,6 +94,7 @@ if __name__ == '__main__':
                   f"Ep_reward: {episode_reward:.3f}| "
                   f"Running_reward: {running_reward:.3f}| "
                   f"Total_loss: {total_loss:.3f}| "
+                  f"Explained variance:{ev:.3f}| "
                   f"Entropy: {entropy:.3f}| "
                   f"Iter_duration: {time.time() - start_time:.3f}| "
                   f"Lr: {brain.scheduler.get_last_lr()}| "

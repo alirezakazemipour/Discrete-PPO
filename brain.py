@@ -4,7 +4,7 @@ from torch import from_numpy
 import numpy as np
 from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import LambdaLR
-
+from utils import explained_variance
 
 class Brain:
     def __init__(self, state_shape, n_actions, device, n_workers, epochs, n_iters, epsilon, lr):
@@ -74,7 +74,7 @@ class Brain:
                 total_loss = critic_loss + actor_loss - 0.01 * entropy
                 self.optimize(total_loss)
 
-        return total_loss.item(), entropy.item()
+        return total_loss.item(), entropy.item(), explained_variance(values, returns)
 
     def equalize_policies(self):
         for old_params, new_params in zip(self.old_policy.parameters(), self.current_policy.parameters()):
@@ -102,8 +102,8 @@ class Brain:
             extended_dones[worker] = np.append(dones[worker], 0)
             gae = 0
             for step in reversed(range(len(rewards[worker]))):
-                delta = rewards[worker][step] +\
-                        gamma * (extended_values[worker][step + 1]) * (1 - extended_dones[worker][step + 1])\
+                delta = rewards[worker][step] + \
+                        gamma * (extended_values[worker][step + 1]) * (1 - extended_dones[worker][step + 1]) \
                         - extended_values[worker][step]
                 gae = delta + gamma * lam * (1 - extended_dones[worker][step + 1]) * gae
                 returns[worker].insert(0, gae + extended_values[worker][step])
@@ -116,10 +116,10 @@ class Brain:
         return policy_distribution.log_prob(actions)
 
     def compute_ac_loss(self, ratio, adv):
-        r_new = ratio * adv
+        new_r = ratio * adv
         clamped_r = torch.clamp(ratio, 1 - self.epsilon, 1 + self.epsilon) * adv
-        loss = torch.min(r_new, clamped_r)
-        loss = - loss.mean()
+        loss = torch.min(new_r, clamped_r)
+        loss = -loss.mean()
         return loss
 
     def save_params(self, iteration, running_reward):
