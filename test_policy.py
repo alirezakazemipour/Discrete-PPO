@@ -3,8 +3,9 @@ import numpy as np
 from utils import *
 
 
-def evaluate_policy(env_name, agent, state_shape):
-    env = make_atari(env_name)
+def evaluate_policy(env, agent, state_shape):
+    # env = make_atari(env_name)
+    # env = gym.make(env_name)
     stacked_states = np.zeros(state_shape, dtype=np.uint8)
     s = env.reset()
     stacked_states = stack_states(stacked_states, s, True)

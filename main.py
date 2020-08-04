@@ -1,5 +1,5 @@
 from runner import Worker
-from multiprocessing import Process, Pipe
+from torch.multiprocessing import Process, Pipe
 import numpy as np
 from brain import Brain
 import gym
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         parents.append(parent_conn)
         p.start()
 
-    for iteration in range(init_iteration + 1, iterations + 1):
+    for iteration in tqdm(range(init_iteration + 1, iterations + 1)):
         start_time = time.time()
         total_states = np.zeros((n_workers, T,) + state_shape)
         total_actions = np.zeros((n_workers, T))
@@ -66,11 +66,12 @@ if __name__ == '__main__':
                 parent.send(int(a))
 
             for worker_id, parent in enumerate(parents):
-                s_, r, d, _ = parent.recv()
+                s_, r, d = parent.recv()
                 total_rewards[worker_id, t] = r
                 total_dones[worker_id, t] = d
                 next_states[worker_id] = s_
         _, next_values = brain.get_actions_and_values(next_states, batch=True)
+        next_values *= (1 - total_dones[:, -1])
 
         total_states = total_states.reshape((n_workers * T,) + state_shape)
         total_actions = total_actions.reshape(n_workers * T)
@@ -79,7 +80,7 @@ if __name__ == '__main__':
         brain.equalize_policies()
         brain.schedule_lr()
         brain.schedule_clip_range(iteration)
-        episode_reward = evaluate_policy(env_name, brain, state_shape)
+        episode_reward = evaluate_policy(test_env, brain, state_shape)
 
         if iteration == 1:
             running_reward = episode_reward

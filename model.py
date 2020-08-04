@@ -46,6 +46,7 @@ class Model(nn.Module):
         value = self.value(x)
         # pi = F.softmax(self.policy(x), dim=1)
         dist = Categorical(F.softmax(self.policy(x), dim=1))
+        # dist = Categorical(logits=self.policy(x))
 
         return dist, value
 
