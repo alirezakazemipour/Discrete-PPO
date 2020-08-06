@@ -38,7 +38,7 @@ class Play:
                 stacked_states = stack_states(stacked_states, s_, False)
                 self.VideoWriter.write(cv2.cvtColor(s_, cv2.COLOR_RGB2BGR))
                 self.env.render()
-                time.sleep(0.01)
+                time.sleep(0.1)
             print(f"episode reward:{episode_reward:.3f}| "
                   f"clipped episode reward:{clipped_ep_reward:.3f}")
             self.env.close()
