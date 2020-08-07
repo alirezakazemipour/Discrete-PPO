@@ -21,6 +21,7 @@ class Play:
 
     def evaluate(self):
         stacked_states = np.zeros((84, 84, 4), dtype=np.uint8)
+        mean_ep_reward = []
         for ep in range(self.max_episode):
             self.env.seed(ep)
             s = self.env.reset()
@@ -38,9 +39,11 @@ class Play:
                 stacked_states = stack_states(stacked_states, s_, False)
                 self.VideoWriter.write(cv2.cvtColor(s_, cv2.COLOR_RGB2BGR))
                 self.env.render()
-                time.sleep(0.1)
+                time.sleep(0.01)
             print(f"episode reward:{episode_reward:.3f}| "
                   f"clipped episode reward:{clipped_ep_reward:.3f}")
+            mean_ep_reward.append(episode_reward)
             self.env.close()
             self.VideoWriter.release()
             cv2.destroyAllWindows()
+        print(f"Mean episode reward:{sum(mean_ep_reward) / len(mean_ep_reward):0.3f}")

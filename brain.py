@@ -133,7 +133,7 @@ class Brain:
                    "params.pth")
 
     def load_params(self):
-        checkpoint = torch.load("params.pth")
+        checkpoint = torch.load("params.pth", map_location=self.device)
         self.current_policy.load_state_dict(checkpoint["current_policy_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])

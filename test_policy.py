@@ -1,5 +1,4 @@
 import gym
-import numpy as np
 from utils import *
 
 
@@ -16,5 +15,5 @@ def evaluate_policy(env_name, agent, state_shape):
         next_s, r, done, _ = env.step(action)
         stacked_states = stack_states(stacked_states, next_s, False)
         episode_reward += np.sign(r)
-    # env.close()
+    env.close()
     return episode_reward
