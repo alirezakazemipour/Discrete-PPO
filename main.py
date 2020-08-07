@@ -21,7 +21,7 @@ T = 128
 epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
-LOAD_FROM_CKP = True
+LOAD_FROM_CKP = False
 
 
 def run_workers(worker, conn):
