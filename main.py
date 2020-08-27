@@ -5,7 +5,7 @@ from brain import Brain
 import gym
 from tqdm import tqdm
 import time
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from test_policy import evaluate_policy
 from play import Play
 
