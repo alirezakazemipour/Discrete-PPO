@@ -5,7 +5,7 @@ from brain import Brain
 import gym
 from tqdm import tqdm
 import time
-from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 from test_policy import evaluate_policy
 from play import Play
 
@@ -14,15 +14,15 @@ test_env = gym.make(env_name)
 n_actions = test_env.action_space.n
 n_workers = 8
 state_shape = (84, 84, 4)
-device = "cuda"
+device = "cpu"
 iterations = int(2e4)
 log_period = 50
 T = 128
 epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
-LOAD_FROM_CKP = False
-Train = True
+LOAD_FROM_CKP = True
+Train = False
 
 
 def run_workers(worker, conn):
