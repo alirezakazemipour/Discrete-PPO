@@ -29,7 +29,7 @@ class Brain:
     def get_actions_and_values(self, state, batch=False):
         if not batch:
             state = np.expand_dims(state, 0)
-        state = from_numpy(state).float().permute([0, 3, 1, 2]).to(self.device)
+        state = from_numpy(state).byte().permute([0, 3, 1, 2]).to(self.device)
         with torch.no_grad():
             dist, value = self.current_policy(state)
             action = dist.sample()
