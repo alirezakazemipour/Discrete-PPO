@@ -21,8 +21,8 @@ T = 128
 epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
-LOAD_FROM_CKP = True
-Train = False
+LOAD_FROM_CKP = False
+Train = True
 
 
 def run_workers(worker, conn):
@@ -54,6 +54,7 @@ if __name__ == '__main__':
             total_rewards = np.zeros((n_workers, T))
             total_dones = np.zeros((n_workers, T))
             total_values = np.zeros((n_workers, T))
+            total_log_probs = np.zeros((n_workers, T))
             next_states = np.zeros((n_workers,) + state_shape)
             next_values = np.zeros(n_workers)
 
@@ -62,7 +63,8 @@ if __name__ == '__main__':
                     s = parent.recv()
                     total_states[worker_id, t] = s
 
-                total_actions[:, t], total_values[:, t] = brain.get_actions_and_values(total_states[:, t], batch=True)
+                total_actions[:, t], total_values[:, t], total_log_probs[:, t] =\
+                    brain.get_actions_and_values(total_states[:, t], batch=True)
                 for parent, a in zip(parents, total_actions[:, t]):
                     parent.send(int(a))
 
@@ -71,7 +73,7 @@ if __name__ == '__main__':
                     total_rewards[worker_id, t] = r
                     total_dones[worker_id, t] = d
                     next_states[worker_id] = s_
-            _, next_values = brain.get_actions_and_values(next_states, batch=True)
+            _, next_values, _ = brain.get_actions_and_values(next_states, batch=True)
             next_values *= (1 - total_dones[:, -1])
 
             # total_states = total_states.reshape((n_workers * T,) + state_shape)
@@ -79,8 +81,7 @@ if __name__ == '__main__':
             # Calculates if value function is a good predictor of the returns (ev > 1)
             # or if it's just worse than predicting nothing (ev =< 0)
             total_loss, entropy, ev = brain.train(total_states, total_actions, total_rewards,
-                                              total_dones, total_values, next_values)
-            brain.equalize_policies()
+                                              total_dones, total_values, total_log_probs, next_values)
             brain.schedule_lr()
             brain.schedule_clip_range(iteration)
             episode_reward = evaluate_policy(env_name, brain, state_shape)

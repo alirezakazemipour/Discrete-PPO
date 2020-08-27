@@ -21,8 +21,6 @@ class Brain:
         self.lr = lr
 
         self.current_policy = Model(self.state_shape, self.n_actions).to(self.device)
-        self.old_policy = Model(self.state_shape, self.n_actions).to(self.device)
-        self.old_policy.load_state_dict(self.current_policy.state_dict())
 
         self.optimizer = Adam(self.current_policy.parameters(), lr=self.lr, eps=1e-5)
         self._schedule_fn = lambda step: max(1.0 - float(step / self.n_iters), 0)
@@ -34,34 +32,34 @@ class Brain:
         state = from_numpy(state).byte().permute([0, 3, 1, 2]).to(self.device)
         with torch.no_grad():
             dist, value = self.current_policy(state)
-            action = dist.sample().cpu().numpy()
-        return action, value.detach().cpu().numpy().squeeze()
+            action = dist.sample()
+            log_prob = dist.log_prob(action)
+        return action.cpu().numpy(), value.detach().cpu().numpy().squeeze(), log_prob.cpu().numpy()
 
-    def choose_mini_batch(self, states, actions, returns, advs, values):
+    def choose_mini_batch(self, states, actions, returns, advs, values, log_probs):
         for worker in range(self.n_workers):
             idxes = np.random.randint(0, states.shape[1], self.mini_batch_size)
             yield states[worker][idxes], actions[worker][idxes], returns[worker][idxes], advs[worker][idxes], \
-                  values[worker][idxes]
+                  values[worker][idxes], log_probs[worker][idxes]
 
-    def train(self, states, actions, rewards, dones, values, next_values):
+    def train(self, states, actions, rewards, dones, values, log_probs, next_values):
         returns = self.get_gae(rewards, values.copy(), next_values, dones)
         values = np.vstack(values)  # .reshape((len(values[0]) * self.n_workers,))
         advs = returns - values
         advs = (advs - advs.mean(1).reshape((-1, 1))) / (advs.std(1).reshape((-1, 1)) + 1e-8)
         for epoch in range(self.epochs):
-            for state, action, q_value, adv, old_value in self.choose_mini_batch(states, actions, returns, advs,
-                                                                                 values):
+            for state, action, q_value, adv, old_value, old_log_prob in self.choose_mini_batch(states, actions, returns,
+                                                                                               advs, values, log_probs):
                 state = torch.ByteTensor(state).permute([0, 3, 1, 2]).to(self.device)
                 action = torch.Tensor(action).to(self.device)
                 adv = torch.Tensor(adv).to(self.device)
                 q_value = torch.Tensor(q_value).to(self.device)
                 old_value = torch.Tensor(old_value).to(self.device)
+                old_log_prob = torch.Tensor(old_log_prob).to(self.device)
 
                 dist, value = self.current_policy(state)
                 entropy = dist.entropy().mean()
                 new_log_prob = self.calculate_log_probs(self.current_policy, state, action)
-                with torch.no_grad():
-                    old_log_prob = self.calculate_log_probs(self.old_policy, state, action)
                 ratio = (new_log_prob - old_log_prob).exp()
                 actor_loss = self.compute_ac_loss(ratio, adv)
 
@@ -76,10 +74,6 @@ class Brain:
         return total_loss.item(), entropy.item(), \
                explained_variance(values.reshape((len(returns[0]) * self.n_workers,)),
                                   returns.reshape((len(returns[0]) * self.n_workers,)))
-
-    def equalize_policies(self):
-        for old_params, new_params in zip(self.old_policy.parameters(), self.current_policy.parameters()):
-            old_params.data.copy_(new_params.data)
 
     def schedule_lr(self):
         self.scheduler.step()

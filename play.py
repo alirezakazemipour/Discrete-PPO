@@ -30,7 +30,7 @@ class Play:
             clipped_ep_reward = 0
             # x = input("Push any button to proceed...")
             for _ in range(self.env._max_episode_steps):
-                action, _ = self.agent.get_actions_and_values(stacked_states)
+                action, _, _ = self.agent.get_actions_and_values(stacked_states)
                 s_, r, done, info = self.env.step(action)
                 episode_reward += r
                 clipped_ep_reward += np.sign(r)
