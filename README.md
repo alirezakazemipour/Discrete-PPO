@@ -42,6 +42,9 @@ python3 main.py
   <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Result.jpeg" height=600s>
 </p>  
 
+## Reference
+[_Proximal Policy Optimization Algorithms_, Schulman et al., 2017](https://arxiv.org/abs/1707.06347)
+
 ## Acknowledgement
 [@OpenAI](https://github.com/openai) for [Baselines](https://github.com/openai/baselines).  
 [@higgsfield](https://github.com/higgsfield) for [his ppo code](https://github.com/higgsfield/RL-Adventure-2/blob/master/3.ppo.ipynb).
