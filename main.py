@@ -14,7 +14,7 @@ test_env = gym.make(env_name)
 n_actions = test_env.action_space.n
 n_workers = 8
 state_shape = (84, 84, 4)
-device = "cpu"
+device = "cuda"
 iterations = int(2e4)
 log_period = 50
 T = 128
@@ -78,6 +78,7 @@ if __name__ == '__main__':
 
             # total_states = total_states.reshape((n_workers * T,) + state_shape)
             # total_actions = total_actions.reshape(n_workers * T)
+
             # Calculates if value function is a good predictor of the returns (ev > 1)
             # or if it's just worse than predicting nothing (ev =< 0)
             total_loss, entropy, ev = brain.train(total_states, total_actions, total_rewards,
