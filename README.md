@@ -37,20 +37,9 @@ python3 main.py
 </p> 
 
 ## Result
-- **Following graphs are breakout environment's result**.
-### 1.Clipped running reward
-![Clipped_running_reward](https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Clipped_running_reward.png)
-### 2.Entropy
-![Entropy](https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Entropy.png) 
-
-<p align="left">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Entropy.png" height=200>
-</p>
-<p align="right">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Explained_variance..png" height=200>
-</p>
+- **Following graphs are breakout environment's result**.  
 <p align="center">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Loss.png" height=200>
+  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Result.png" height=600s>
 </p>  
 
 ## Acknowledgement
