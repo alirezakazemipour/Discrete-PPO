@@ -39,7 +39,7 @@ python3 main.py
 ## Result
 - **Following graphs are breakout environment's result**.  
 <p align="center">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Result.png" height=600s>
+  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Result.jpeg" height=600s>
 </p>  
 
 ## Acknowledgement
