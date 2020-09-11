@@ -24,7 +24,7 @@ The training requires a suitable (not necessarily a 1080 Ti or a 2080 RTX Nvidia
 python3 main.py
 ```
 - **If you want continue the previous training procedure, turn `LOAD_FROM_CKP` to `True` otherwise, the training would be restarted from scratch**.  
-- ** If you want to test the agent, simply turn `Train` flag to `False`**. There is a pre-trained model in the _Pre-trained models_ directory that you may use to see agent plays.  
+- **If you want to test the agent, simply turn `Train` flag to `False`**. There is a pre-trained model in the _Pre-trained models_ directory that you may use to see agent plays.  
 
 ## Environments tested
 - [x] Pong
@@ -38,18 +38,20 @@ python3 main.py
 
 ## Result
 - **Following graphs are breakout environment's result**.
-<p align="center">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Clipped_running_reward.png" height=400>
-</p> 
+### 1.Clipped running reward
+![Clipped_running_reward](https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Clipped_running_reward.png)
+### 2.Entropy
+![Entropy](https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Entropy.png) 
+
 <p align="left">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Entropy.png" height=400>
-</p> 
+  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Entropy.png" height=200>
+</p>
 <p align="right">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Explained_variance..png" height=400>
-</p>  
+  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Explained_variance..png" height=200>
+</p>
 <p align="center">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Loss.png" height=400>
-</p> 
+  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Loss.png" height=200>
+</p>  
 
 ## Acknowledgement
 [@OpenAI](https://github.com/openai) for [Baselines](https://github.com/openai/baselines).  
