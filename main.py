@@ -74,7 +74,6 @@ if __name__ == '__main__':
                     total_dones[worker_id, t] = d
                     next_states[worker_id] = s_
             _, next_values, _ = brain.get_actions_and_values(next_states, batch=True)
-            next_values *= (1 - total_dones[:, -1])
 
             # total_states = total_states.reshape((n_workers * T,) + state_shape)
             # total_actions = total_actions.reshape(n_workers * T)
