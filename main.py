@@ -3,26 +3,30 @@ from torch.multiprocessing import Process, Pipe
 import numpy as np
 from brain import Brain
 import gym
+from nes_py.wrappers import JoypadSpace
+import gym_super_mario_bros
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 from tqdm import tqdm
 import time
 from torch.utils.tensorboard import SummaryWriter
 from test_policy import evaluate_policy
 from play import Play
 
-env_name = "BreakoutNoFrameskip-v4"
-test_env = gym.make(env_name)
+env_name = "SuperMarioBros-1-1-v0"
+test_env = gym_super_mario_bros.make(env_name)
+test_env = JoypadSpace(test_env, SIMPLE_MOVEMENT)
 n_actions = test_env.action_space.n
-n_workers = 8
+n_workers = 2
 state_shape = (84, 84, 4)
 device = "cuda"
 iterations = int(2e4)
-log_period = 50
+log_period = 10
 T = 128
 epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
-LOAD_FROM_CKP = True
-Train = False
+LOAD_FROM_CKP = False
+Train = True
 
 
 def run_workers(worker, conn):
@@ -84,7 +88,7 @@ if __name__ == '__main__':
                                               total_dones, total_values, total_log_probs, next_values)
             brain.schedule_lr()
             brain.schedule_clip_range(iteration)
-            episode_reward = evaluate_policy(env_name, brain, state_shape)
+            episode_reward = 0#evaluate_policy(env_name, brain, state_shape)
 
             if iteration == 1:
                 running_reward = episode_reward

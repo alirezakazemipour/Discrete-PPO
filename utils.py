@@ -1,6 +1,9 @@
 import numpy as np
 import cv2
 import gym
+from nes_py.wrappers import JoypadSpace
+import gym_super_mario_bros
+from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 
 
 def rgb2gray(img):
@@ -39,8 +42,9 @@ def explained_variance(ypred, y):
 
 
 def make_atari(env_id):
-    main_env = gym.make(env_id)
-    assert 'NoFrameskip' in main_env.spec.id
+    main_env = gym_super_mario_bros.make(env_id)
+    main_env = JoypadSpace(main_env, SIMPLE_MOVEMENT)
+    # assert 'NoFrameskip' in main_env.spec.id
     env = NoopResetEnv(main_env)
     env = RepeatActionEnv(env)
     env = EpisodicLifeEnv(env)
@@ -49,16 +53,12 @@ def make_atari(env_id):
     return env
 
 
-class NoopResetEnv:
+class NoopResetEnv(gym.Wrapper):
     def __init__(self, env):
+        super(NoopResetEnv, self).__init__(env)
         self.noop_max = 30
         self.noop_action = 0
         self.env = env
-        self.unwrapped = self.env.unwrapped
-        self.observation_space = env.observation_space
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
-        self.ale = self.env.ale
         assert self.env.unwrapped.get_action_meanings()[0] == 'NOOP'
         self.observation_space = self.env.observation_space
 
@@ -78,24 +78,11 @@ class NoopResetEnv:
     def step(self, action):
         return self.env.step(action)
 
-    def render(self):
-        self.env.render()
 
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
-
-
-class RepeatActionEnv:
+class RepeatActionEnv(gym.Wrapper):
     def __init__(self, env):
+        super(RepeatActionEnv, self).__init__(env)
         self.env = env
-        self.unwrapped = self.env.unwrapped
-        self.observation_space = env.observation_space
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
-        self.ale = self.env.ale
         self.successive_frame = np.zeros((2,) + self.env.observation_space.shape, dtype=np.uint8)
 
     def reset(self):
@@ -116,24 +103,11 @@ class RepeatActionEnv:
         state = self.successive_frame.max(axis=0)
         return state, reward, done, info
 
-    def render(self):
-        self.env.render()
 
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
-
-
-class EpisodicLifeEnv:
+class EpisodicLifeEnv(gym.Wrapper):
     def __init__(self, env):
+        super(EpisodicLifeEnv, self).__init__(env)
         self.env = env
-        self.ale = self.env.ale
-        self.unwrapped = self.env.unwrapped
-        self.observation_space = env.observation_space
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
         self.natural_done = True
         self.lives = 0
 
@@ -141,28 +115,20 @@ class EpisodicLifeEnv:
         state, reward, done, info = self.env.step(action)
         self.natural_done = done
 
-        if self.lives > info["ale.lives"] > 0:
+        if self.lives > info["life"] > 0:
             done = True
-        self.lives = info["ale.lives"]
+        self.lives = info["life"]
 
         return state, reward, done, info
 
     def reset(self):
         if self.natural_done:
             state = self.env.reset()
+            self.lives = 2#self.env.smb_env._life
         else:
-            state, _, _, _ = self.env.step(0)
-        self.lives = self.env.ale.lives()
+            state, _, _, info = self.env.step(0)
+            self.lives = info["life"]
         return state
-
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
 
 
 class FireResetEnv:
@@ -187,12 +153,3 @@ class FireResetEnv:
         if done:
             self.env.reset()
         return state
-
-    def render(self):
-        self.env.render()
-
-    def close(self):
-        self.env.close()
-
-    def seed(self, seed):
-        self.env.seed(seed)
