@@ -9,6 +9,7 @@ class Worker:
         self.env = make_atari(self.env_name)
         self._stacked_states = np.zeros(self.state_shape, dtype=np.uint8)
         self.reset()
+        print(f"Worker: {self.id} initiated.")
 
     def __str__(self):
         return str(self.id)
@@ -25,7 +26,7 @@ class Worker:
             conn.send(self._stacked_states)
             action = conn.recv()
             next_state, r, d, info = self.env.step(action)
-            # print(info)
+            # print(np.sign(r))
             # self.render()
             self._stacked_states = stack_states(self._stacked_states, next_state, False)
             conn.send((self._stacked_states, np.sign(r), d))

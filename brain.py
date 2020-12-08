@@ -29,7 +29,7 @@ class Brain:
     def get_actions_and_values(self, state, batch=False):
         if not batch:
             state = np.expand_dims(state, 0)
-        state = from_numpy(state).byte().permute([0, 3, 1, 2]).to(self.device)
+        state = from_numpy(state).byte().to(self.device)
         with torch.no_grad():
             dist, value = self.current_policy(state)
             action = dist.sample()
@@ -37,25 +37,28 @@ class Brain:
         return action.cpu().numpy(), value.detach().cpu().numpy().squeeze(), log_prob.cpu().numpy()
 
     def choose_mini_batch(self, states, actions, returns, advs, values, log_probs):
-        for worker in range(self.n_workers):
-            idxes = np.random.randint(0, states.shape[1], self.mini_batch_size)
-            yield states[worker][idxes], actions[worker][idxes], returns[worker][idxes], advs[worker][idxes], \
-                  values[worker][idxes], log_probs[worker][idxes]
+        full_batch_size = len(states)
+        states = torch.ByteTensor(states).to(self.device)
+        actions = torch.Tensor(actions).to(self.device)
+        advs = torch.Tensor(advs).to(self.device)
+        returns = torch.Tensor(returns).to(self.device)
+        values = torch.Tensor(values).to(self.device)
+        log_probs = torch.Tensor(log_probs).to(self.device)
+
+        indices = np.random.randint(0, full_batch_size, (self.n_workers, self.mini_batch_size))
+
+        for idx in indices:
+            yield states[idx], actions[idx], advs[idx], returns[idx], values[idx], \
+                  log_probs[idx]
 
     def train(self, states, actions, rewards, dones, values, log_probs, next_values):
         returns = self.get_gae(rewards, values.copy(), next_values, dones)
-        values = np.vstack(values)  # .reshape((len(values[0]) * self.n_workers,))
+        values = np.concatenate(values)
         advs = returns - values
-        advs = (advs - advs.mean(1).reshape((-1, 1))) / (advs.std(1).reshape((-1, 1)) + 1e-8)
+        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for epoch in range(self.epochs):
             for state, action, q_value, adv, old_value, old_log_prob in self.choose_mini_batch(states, actions, returns,
                                                                                                advs, values, log_probs):
-                state = torch.ByteTensor(state).permute([0, 3, 1, 2]).to(self.device)
-                action = torch.Tensor(action).to(self.device)
-                adv = torch.Tensor(adv).to(self.device)
-                q_value = torch.Tensor(q_value).to(self.device)
-                old_value = torch.Tensor(old_value).to(self.device)
-                old_log_prob = torch.Tensor(old_log_prob).to(self.device)
 
                 dist, value = self.current_policy(state)
                 entropy = dist.entropy().mean()
@@ -71,9 +74,7 @@ class Brain:
                 total_loss = critic_loss + actor_loss - 0.01 * entropy
                 self.optimize(total_loss)
 
-        return total_loss.item(), entropy.item(), \
-               explained_variance(values.reshape((len(returns[0]) * self.n_workers,)),
-                                  returns.reshape((len(returns[0]) * self.n_workers,)))
+        return total_loss.item(), entropy.item(), explained_variance(values, returns)
 
     def schedule_lr(self):
         self.scheduler.step()
@@ -101,7 +102,7 @@ class Brain:
                 gae = delta + gamma * lam * (1 - dones[worker][step]) * gae
                 returns[worker].insert(0, gae + extended_values[worker][step])
 
-        return np.vstack(returns)  # .reshape((len(returns[0]) * self.n_workers,))
+        return np.concatenate(returns)
 
     @staticmethod
     def calculate_log_probs(model, states, actions):
@@ -115,11 +116,12 @@ class Brain:
         loss = -loss.mean()
         return loss
 
-    def save_params(self, iteration, running_reward):
+    def save_params(self, iteration, running_reward, episode):
         torch.save({"current_policy_state_dict": self.current_policy.state_dict(),
                     "optimizer_state_dict": self.optimizer.state_dict(),
                     "scheduler_state_dict": self.scheduler.state_dict(),
                     "iteration": iteration,
+                    "episode": episode,
                     "running_reward": running_reward,
                     "clip_range": self.epsilon},
                    "params.pth")
@@ -130,10 +132,11 @@ class Brain:
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
         iteration = checkpoint["iteration"]
+        episode = checkpoint["episode"]
         running_reward = checkpoint["running_reward"]
         self.epsilon = checkpoint["clip_range"]
 
-        return running_reward, iteration
+        return running_reward, iteration, episode
 
     def set_to_eval_mode(self):
         self.current_policy.eval()

@@ -1,16 +1,17 @@
+from abc import ABC
 from torch import nn
 from torch.nn import functional as F
 from torch.distributions import Categorical
 
 
-class Model(nn.Module):
+class Model(nn.Module, ABC):
 
     def __init__(self, state_shape, n_actions):
         super(Model, self).__init__()
         self.state_shape = state_shape
         self.n_actions = n_actions
 
-        w, h, c = state_shape
+        c, w, h = state_shape
         #  https://github.com/openai/baselines/blob/master/baselines/ppo1/cnn_policy.py
         self.conv1 = nn.Conv2d(in_channels=c, out_channels=16, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4, stride=2)
@@ -22,7 +23,7 @@ class Model(nn.Module):
 
         self.fc = nn.Linear(in_features=flatten_size, out_features=256)
         self.value = nn.Linear(in_features=256, out_features=1)
-        self.policy = nn.Linear(in_features=256, out_features=self.n_actions)
+        self.logits = nn.Linear(in_features=256, out_features=self.n_actions)
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
@@ -33,21 +34,18 @@ class Model(nn.Module):
         self.fc.bias.data.zero_()
         nn.init.xavier_uniform_(self.value.weight)
         self.value.bias.data.zero_()
-        nn.init.xavier_uniform_(self.policy.weight)
-        self.policy.bias.data.zero_()
+        nn.init.xavier_uniform_(self.logits.weight)
+        self.logits.bias.data.zero_()
 
     def forward(self, inputs):
         x = inputs / 255.
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
-        # x = F.relu((self.conv3(x)))
         x = x.contiguous()
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc(x))
         value = self.value(x)
-        # pi = F.softmax(self.policy(x), dim=1)
-        dist = Categorical(F.softmax(self.policy(x), dim=1))
-        # dist = Categorical(logits=self.policy(x))
+        dist = Categorical(F.softmax(self.logits(x), dim=1))
 
         return dist, value
 
