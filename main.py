@@ -25,7 +25,7 @@ epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
 LOAD_FROM_CKP = False
-Train = True
+Train = False
 
 
 def run_workers(worker, conn):
@@ -113,8 +113,8 @@ if __name__ == '__main__':
             if iteration % log_period == 0:
                 print(f"Iter: {iteration}| "
                       f"Episode: {episode}| "
-                      f"Ep_reward: {episode_reward:.3f}| "
-                      f"Running_reward: {running_reward:.3f}| "
+                      f"Ep_reward: {episode_reward}| "
+                      f"Running_reward: {running_reward:.1f}| "
                       f"Total_loss: {total_loss:.3f}| "
                       f"Explained variance:{ev:.3f}| "
                       f"Entropy: {entropy:.3f}| "

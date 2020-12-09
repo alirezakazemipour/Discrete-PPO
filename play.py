@@ -7,7 +7,7 @@ from utils import *
 
 class Play:
     def __init__(self, env, agent, max_episode=10):
-        self.env = make_atari(env)
+        self.env = make_mario(env)
         self.max_episode = max_episode
         self.agent = agent
         self.agent.load_params()
@@ -20,28 +20,28 @@ class Play:
                                            self.env.observation_space.shape[1::-1])
 
     def evaluate(self):
-        stacked_states = np.zeros((84, 84, 4), dtype=np.uint8)
+        stacked_states = np.zeros((4, 84, 84), dtype=np.uint8)
         mean_ep_reward = []
         for ep in range(self.max_episode):
-            self.env.seed(ep)
+            # self.env.seed(ep)
             s = self.env.reset()
             stacked_states = stack_states(stacked_states, s, True)
             episode_reward = 0
             clipped_ep_reward = 0
             # x = input("Push any button to proceed...")
-            for _ in range(self.env._max_episode_steps):
+            done = False
+            while not done:
                 action, _, _ = self.agent.get_actions_and_values(stacked_states)
-                s_, r, done, info = self.env.step(action)
+                s_, r, done, info = self.env.step(action[0])
                 episode_reward += r
                 clipped_ep_reward += np.sign(r)
-                if done and info["ale.lives"] == 0:
-                    break
+
                 stacked_states = stack_states(stacked_states, s_, False)
                 self.VideoWriter.write(cv2.cvtColor(s_, cv2.COLOR_RGB2BGR))
                 self.env.render()
                 time.sleep(0.01)
-            print(f"episode reward:{episode_reward:.3f}| "
-                  f"clipped episode reward:{clipped_ep_reward:.3f}")
+            print(f"episode reward:{episode_reward:.1f}| "
+                  f"clipped episode reward:{clipped_ep_reward:.1f}")
             mean_ep_reward.append(episode_reward)
             self.env.close()
             self.VideoWriter.release()

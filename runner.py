@@ -6,8 +6,9 @@ class Worker:
         self.id = id
         self.env_name = env_name
         self.state_shape = state_shape
-        self.env = make_atari(self.env_name)
+        self.env = make_mario(self.env_name)
         self._stacked_states = np.zeros(self.state_shape, dtype=np.uint8)
+        self.score = 0
         self.reset()
         print(f"Worker: {self.id} initiated.")
 
@@ -26,9 +27,13 @@ class Worker:
             conn.send(self._stacked_states)
             action = conn.recv()
             next_state, r, d, info = self.env.step(action)
+            new_score = info["score"] - self.score
+            self.score = info["score"]
+            r = r + new_score + int(info["flag_get"])
             # print(np.sign(r))
             # self.render()
             self._stacked_states = stack_states(self._stacked_states, next_state, False)
             conn.send((self._stacked_states, np.sign(r), d))
             if d:
+                self.score = 0
                 self.reset()

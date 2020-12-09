@@ -41,13 +41,13 @@ def explained_variance(ypred, y):
     return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
 
 
-def make_atari(env_id):
+def make_mario(env_id):
     main_env = gym_super_mario_bros.make(env_id)
-    main_env = JoypadSpace(main_env, SIMPLE_MOVEMENT)
-    # assert 'NoFrameskip' in main_env.spec.id
-    env = NoopResetEnv(main_env)
+    env = JoypadSpace(main_env, SIMPLE_MOVEMENT)
+    assert 'SuperMarioBros' in main_env.spec.id
+    # env = NoopResetEnv(env)
     env = RepeatActionEnv(env)
-    env = EpisodicLifeEnv(env)
+    # env = EpisodicLifeEnv(env)
     if 'FIRE' in main_env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
     return env
