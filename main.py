@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
             # Calculates if value function is a good predictor of the returns (ev > 1)
             # or if it's just worse than predicting nothing (ev =< 0)
-            total_loss, entropy, ev = brain.train(total_states, total_actions, total_rewards,
+            total_loss, entropy, ev = brain.train(total_states, total_actions, np.sign(total_rewards),
                                                   total_dones, total_values, total_log_probs, next_values)
             brain.schedule_lr()
             brain.schedule_clip_range(iteration)
