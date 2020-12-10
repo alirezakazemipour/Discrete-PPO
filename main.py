@@ -18,7 +18,7 @@ n_actions = test_env.action_space.n
 n_workers = 8
 state_shape = (4, 84, 84)
 device = "cuda"
-iterations = int(2e4)
+iterations = 1000
 log_period = 10
 T = 128
 epochs = 3
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
             # Calculates if value function is a good predictor of the returns (ev > 1)
             # or if it's just worse than predicting nothing (ev =< 0)
-            total_loss, entropy, ev = brain.train(total_states, total_actions, np.sign(total_rewards),
+            total_loss, entropy, ev = brain.train(total_states, total_actions, total_rewards,
                                                   total_dones, total_values, total_log_probs, next_values)
             brain.schedule_lr()
             brain.schedule_clip_range(iteration)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
             if iteration % log_period == 0:
                 print(f"Iter: {iteration}| "
                       f"Episode: {episode}| "
-                      f"Ep_reward: {episode_reward}| "
+                      f"Ep_reward: {episode_reward:.1f}| "
                       f"Running_reward: {running_reward:.1f}| "
                       f"Total_loss: {total_loss:.3f}| "
                       f"Explained variance:{ev:.3f}| "
