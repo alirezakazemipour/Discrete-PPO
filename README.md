@@ -29,12 +29,13 @@ python3 main.py
 ## Environments tested
 - [x] Pong
 - [x] Breakout 
+- [ ] SuperMarioBros-1-1
 - [ ] MsPacman
 
 ## Demo
-<p align="center">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/demo/Breakout.gif" height=400>
-</p> 
+Breakout | Mario
+:-------------:|:---------:
+![](demo/Breakout.gif)| ![](demo/mario.gif)
 
 ## Result
 - **Following graphs are breakout environment's result**.  
