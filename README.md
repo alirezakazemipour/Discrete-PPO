@@ -29,7 +29,7 @@ python3 main.py
 ## Environments tested
 - [x] Pong
 - [x] Breakout 
-- [x] SuperMarioBros-1-1
+- [ ] SuperMarioBros-1-1
 - [ ] MsPacman
 
 ## Demo
