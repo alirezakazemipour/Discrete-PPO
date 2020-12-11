@@ -37,14 +37,14 @@ class Play:
                 s_, r, done, info = self.env.step(action[0])
                 new_score = info["score"] - self.score
                 self.score = info["score"]
-                r = r + new_score + int(info["flag_get"])
+                r = r + new_score / 40 + int(info["flag_get"])
                 episode_reward += r
-                clipped_ep_reward += np.sign(r)
+                clipped_ep_reward += r / 10
 
                 stacked_states = stack_states(stacked_states, s_, False)
                 self.VideoWriter.write(cv2.cvtColor(s_, cv2.COLOR_RGB2BGR))
                 self.env.render()
-                time.sleep(0.1)
+                time.sleep(0.01)
             print(f"episode reward:{episode_reward:.1f}| "
                   f"clipped episode reward:{clipped_ep_reward:.1f}")
             mean_ep_reward.append(episode_reward)

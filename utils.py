@@ -46,7 +46,6 @@ def make_mario(env_id):
     main_env = gym_super_mario_bros.make(env_id)
     env = JoypadSpace(main_env, SIMPLE_MOVEMENT)
     assert 'SuperMarioBros' in main_env.spec.id
-    # env = NoopResetEnv(env)
     env = RepeatActionEnv(env)
     # env = EpisodicLifeEnv(env)
     return env

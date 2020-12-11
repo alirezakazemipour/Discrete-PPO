@@ -2,7 +2,6 @@ from runner import Worker
 from torch.multiprocessing import Process, Pipe
 import numpy as np
 from brain import Brain
-import gym
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT

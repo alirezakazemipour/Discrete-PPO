@@ -56,6 +56,7 @@ class Brain:
         values = np.concatenate(values)
         advs = returns - values
         advs = (advs - advs.mean()) / (advs.std() + 1e-8)
+        # pg_losses, v_losses, entropies = [], [], []
         for epoch in range(self.epochs):
             for state, action, q_value, adv, old_value, old_log_prob in self.choose_mini_batch(states, actions, returns,
                                                                                                advs, values, log_probs):
@@ -73,6 +74,10 @@ class Brain:
 
                 total_loss = critic_loss + actor_loss - 0.01 * entropy
                 self.optimize(total_loss)
+
+                # pg_losses.append(actor_loss.item())
+                # v_losses.append(critic_loss.item())
+                # entropies.append(entropy.item())
 
         return total_loss.item(), entropy.item(), explained_variance(values, returns)
 

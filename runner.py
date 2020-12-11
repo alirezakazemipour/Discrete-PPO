@@ -21,6 +21,7 @@ class Worker:
     def reset(self):
         state = self.env.reset()
         self._stacked_states = stack_states(self._stacked_states, state, True)
+        self.score = 0
 
     def step(self, conn):
         while True:
@@ -29,9 +30,13 @@ class Worker:
             next_state, r, d, info = self.env.step(action)
             new_score = info["score"] - self.score
             self.score = info["score"]
-            r = r + new_score + int(info["flag_get"])
-            self._stacked_states = stack_states(self._stacked_states, next_state, False)
-            conn.send((self._stacked_states, np.sign(r), d))
+            r = r + new_score / 40
             if d:
-                self.score = 0
+                if info["flag_get"]:
+                    r += 350
+                else:
+                    r -= 50
+            self._stacked_states = stack_states(self._stacked_states, next_state, False)
+            conn.send((self._stacked_states, r / 10, d))
+            if d:
                 self.reset()
