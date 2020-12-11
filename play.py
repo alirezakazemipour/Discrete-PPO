@@ -16,8 +16,10 @@ class Play:
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
         if not os.path.exists("Results"):
             os.mkdir("Results")
-        self.VideoWriter = cv2.VideoWriter("Results/" + "ppo_breakout" + ".avi", self.fourcc, 50.0,
+        self.VideoWriter = cv2.VideoWriter("Results/" + "ppo_breakout" + ".avi", self.fourcc, 10.0,
                                            self.env.observation_space.shape[1::-1])
+
+        self.score = 0
 
     def evaluate(self):
         stacked_states = np.zeros((4, 84, 84), dtype=np.uint8)
@@ -33,6 +35,9 @@ class Play:
             while not done:
                 action, _, _ = self.agent.get_actions_and_values(stacked_states)
                 s_, r, done, info = self.env.step(action[0])
+                new_score = info["score"] - self.score
+                self.score = info["score"]
+                r = r + new_score + int(info["flag_get"])
                 episode_reward += r
                 clipped_ep_reward += np.sign(r)
 

@@ -10,9 +10,10 @@ def rgb2gray(img):
     return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
 
-def preprocessing(img):
-    img = rgb2gray(img)  # / 255.0 -> Do it later in order to open up more RAM !!!!
-    img = cv2.resize(img, (84, 84), interpolation=cv2.INTER_AREA)
+def preprocessing(x):
+    img = rgb2gray(x)  # / 255.0 -> Do it later in order to open up more RAM !!!!
+    img = cv2.resize(img, (84, 110), interpolation=cv2.INTER_AREA)
+    img = img[18:102, :]
     return img
 
 
@@ -48,8 +49,6 @@ def make_mario(env_id):
     # env = NoopResetEnv(env)
     env = RepeatActionEnv(env)
     # env = EpisodicLifeEnv(env)
-    if 'FIRE' in main_env.unwrapped.get_action_meanings():
-        env = FireResetEnv(env)
     return env
 
 
@@ -128,28 +127,4 @@ class EpisodicLifeEnv(gym.Wrapper):
         else:
             state, _, _, info = self.env.step(0)
             self.lives = info["life"]
-        return state
-
-
-class FireResetEnv:
-    def __init__(self, env):
-        self.env = env
-        self.observation_space = env.observation_space
-        self.ale = self.env.ale
-        self.action_space = self.env.action_space
-        self._max_episode_steps = self.env._max_episode_steps
-        assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
-        assert len(env.unwrapped.get_action_meanings()) >= 3
-
-    def step(self, action):
-        return self.env.step(action)
-
-    def reset(self):
-        self.env.reset()
-        state, _, done, _ = self.env.step(1)
-        if done:
-            self.env.reset()
-        state, _, done, _ = self.env.step(2)
-        if done:
-            self.env.reset()
         return state
