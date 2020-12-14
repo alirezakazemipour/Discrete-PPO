@@ -15,7 +15,7 @@ env_name = "SuperMarioBros-1-1-v0"
 test_env = gym_super_mario_bros.make(env_name)
 test_env = JoypadSpace(test_env, SIMPLE_MOVEMENT)
 n_actions = test_env.action_space.n
-n_workers = 8
+n_workers = 2
 state_shape = (4, 84, 84)
 device = "cuda"
 iterations = 24000
@@ -24,7 +24,7 @@ T = 128
 epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
-LOAD_FROM_CKP = True
+LOAD_FROM_CKP = False
 Train = True
 
 
@@ -36,8 +36,8 @@ def receive(p):
     return p.recv()
 
 
-def send_action(x):
-    x[0].send(int(x[1]))
+def send_action(p, a):
+    p.send(a)
 
 
 if __name__ == '__main__':
@@ -88,9 +88,10 @@ if __name__ == '__main__':
 
                 total_actions[:, t], total_values[:, t], total_log_probs[:, t] = \
                     brain.get_actions_and_values(total_states[:, t], batch=True)
-                for parent, a in zip(parents, total_actions[:, t]):
-                    parent.send(int(a))
-                # k = map(send_action, (parents, total_actions[:, t]))
+
+                # for parent, a in zip(parents, total_actions[:, t]):
+                #     parent.send(int(a))
+                list(map(send_action, parents, total_actions[:, t]))
 
                 # for worker_id, parent in enumerate(parents):
                 x = list(map(receive, parents))
