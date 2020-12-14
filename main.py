@@ -1,6 +1,7 @@
 from runner import Worker
 from torch.multiprocessing import Process, Pipe
 import numpy as np
+from numpy import asarray
 from brain import Brain
 from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
@@ -17,18 +18,26 @@ n_actions = test_env.action_space.n
 n_workers = 8
 state_shape = (4, 84, 84)
 device = "cuda"
-iterations = 1000
+iterations = 24000
 log_period = 10
 T = 128
 epochs = 3
 lr = 2.5e-4
 clip_range = 0.1
-LOAD_FROM_CKP = False
+LOAD_FROM_CKP = True
 Train = True
 
 
 def run_workers(worker, conn):
     worker.step(conn)
+
+
+def receive(p):
+    return p.recv()
+
+
+def send_action(x):
+    x[0].send(int(x[1]))
 
 
 if __name__ == '__main__':
@@ -53,10 +62,10 @@ if __name__ == '__main__':
         init_total_states = np.zeros((n_workers, T,) + state_shape)
         init_total_actions = np.zeros((n_workers, T))
         init_total_rewards = np.zeros((n_workers, T))
-        init_total_dones = np.zeros((n_workers, T))
+        init_total_dones = np.zeros((n_workers, T), dtype=np.bool)
         init_total_values = np.zeros((n_workers, T))
         init_total_log_probs = np.zeros((n_workers, T))
-        init_next_states = np.zeros((n_workers,) + state_shape)
+        init_next_states = np.zeros((n_workers,) + state_shape, dtype=np.uint8)
         init_next_values = np.zeros(n_workers)
 
         episode_reward = 0
@@ -72,20 +81,23 @@ if __name__ == '__main__':
             next_values = init_next_values
 
             for t in range(T):
-                for worker_id, parent in enumerate(parents):
-                    s = parent.recv()
-                    total_states[worker_id, t] = s
+                # for worker_id, parent in enumerate(parents):
+                #     s = parent.recv()
+                #     total_states[worker_id, t] = s
+                total_states[:, t] = asarray(list(map(receive, parents)), dtype=np.uint8)
 
                 total_actions[:, t], total_values[:, t], total_log_probs[:, t] = \
                     brain.get_actions_and_values(total_states[:, t], batch=True)
                 for parent, a in zip(parents, total_actions[:, t]):
                     parent.send(int(a))
+                # k = map(send_action, (parents, total_actions[:, t]))
 
-                for worker_id, parent in enumerate(parents):
-                    s_, r, d = parent.recv()
-                    total_rewards[worker_id, t] = r
-                    total_dones[worker_id, t] = d
-                    next_states[worker_id] = s_
+                # for worker_id, parent in enumerate(parents):
+                x = list(map(receive, parents))
+                s_, r, d = asarray(x, dtype=object)[:, 0], asarray(x, dtype=object)[:, 1], asarray(x, dtype=object)[:, 2]
+                total_rewards[:, t] = r
+                total_dones[:, t] = d
+                next_states[:] = np.concatenate(s_).reshape(n_workers, *state_shape)
 
                 episode_reward += total_rewards[0, t]
                 if total_dones[0, t]:
