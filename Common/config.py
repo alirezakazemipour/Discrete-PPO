@@ -11,10 +11,10 @@ def get_params():
                         help="The id number of the mario world's stage.")
     parser.add_argument("--total_iterations", default=30000, type=int,
                         help="The total number of iterations.")
-    parser.add_argument("--interval", default=50, type=int,
+    parser.add_argument("--interval", default=10, type=int,
                         help="The interval specifies how often different parameters should be saved and printed,"
                              " counted by iterations.")
-    parser.add_argument("--do_test", action="store_false",
+    parser.add_argument("--do_train", action="store_false",
                         help="The flag determines whether to train the agent or play with it.")
     parser.add_argument("--render", action="store_true",
                         help="The flag determines whether to render each agent or not.")

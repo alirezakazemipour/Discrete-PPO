@@ -29,14 +29,14 @@ if __name__ == '__main__':
     brain = Brain(**config)
     logger = Logger(brain, **config)
 
-    if config["do_test"]:
+    if config["do_train"]:
         if not config["train_from_scratch"]:
             checkpoint = logger.load_weights()
             brain.set_from_checkpoint(checkpoint)
             running_reward = checkpoint["running_reward"]
             init_iteration = checkpoint["iteration"]
             episode = checkpoint["episode"]
-            position = checkpoint["visited_rooms"]
+            position = checkpoint["position"]
             logger.running_reward = running_reward
             logger.episode = episode
             logger.position = position
@@ -102,21 +102,23 @@ if __name__ == '__main__':
                     episode += 1
                     position = infos[0]["x_pos"]
                     logger.log_episode(episode, episode_reward, position)
-                    episode_ext_reward = 0
+                    episode_reward = 0
 
-                    _, next_values, *_ = brain.get_actions_and_values(next_states, batch=True)
+            _, next_values, *_ = brain.get_actions_and_values(next_states, batch=True)
 
-                    training_logs = brain.train(states=concatenate(total_states),
-                                                actions=concatenate(total_actions),
-                                                rewards=total_rewards,
-                                                dones=total_dones,
-                                                values=total_values,
-                                                log_probs=concatenate(total_log_probs),
-                                                next_values=next_values)
+            training_logs = brain.train(states=concatenate(total_states),
+                                        actions=concatenate(total_actions),
+                                        rewards=total_rewards,
+                                        dones=total_dones,
+                                        values=total_values,
+                                        log_probs=concatenate(total_log_probs),
+                                        next_values=next_values)
+            brain.schedule_lr()
+            brain.schedule_clip_range(iteration)
 
-                    logger.log_iteration(iteration,
-                                         training_logs,
-                                         total_action_probs[0].max(-1).mean())
+            logger.log_iteration(iteration,
+                                 training_logs,
+                                 total_action_probs[0].max(-1).mean())
 
     else:
         checkpoint = logger.load_weights()

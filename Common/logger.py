@@ -28,7 +28,7 @@ class Logger:
         self.last_10_ep_rewards = deque(maxlen=10)
         self.running_last_10_r = 0  # It is not correct but does not matter.
 
-        if self.config["do_test"] and self.config["train_from_scratch"]:
+        if self.config["do_train"] and self.config["train_from_scratch"]:
             self.create_wights_folder()
             self.log_params()
 
@@ -76,10 +76,12 @@ class Logger:
         if iteration % self.config["interval"] == 0:
             print("Iter: {}| "
                   "E: {}| "
-                  "E_Reward: {}| "
-                  "E_Running_Reward: {:.3f}| "
+                  "E_Reward: {:.1f}| "
+                  "E_Running_Reward: {:.1f}| "
                   "Position: {}| "
-                  "Running Position: {}"
+                  "Running Position: {:.1f}| "
+                  "LR: {}| "
+                  "Clip Range: {:.3f}| "
                   "Iter_Duration: {:.3f}| "
                   "Time: {} "
                   .format(iteration,
@@ -88,6 +90,8 @@ class Logger:
                           self.running_reward,
                           self.position,
                           self.running_position,
+                          self.brain.scheduler.get_last_lr(),
+                          self.brain.epsilon,
                           self.duration,
                           datetime.datetime.now().strftime("%H:%M:%S"),
                           )

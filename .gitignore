@@ -15,7 +15,8 @@ downloads/
 eggs/
 .eggs/
 .idea/
-SuperMarioBros-1-1-v0/
+Logs/
+Models/
 vid/
 lib/
 lib64/
