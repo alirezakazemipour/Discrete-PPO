@@ -73,11 +73,12 @@ class RepeatActionEnv(gym.Wrapper):
             state, r, done, info = self.env.step(action)
             if t == 2:
                 self.successive_frame[0] = state
+                state = self.successive_frame.max(axis=0)
             elif t == 3:
                 self.successive_frame[1] = state
+                state = self.successive_frame.max(axis=0)
             reward += r
             if done:
                 break
 
-        state = self.successive_frame.max(axis=0)
         return state, reward, done, info

@@ -16,7 +16,7 @@ class Brain:
 
         self.current_policy = Model(self.config["state_shape"], self.config["n_actions"]).to(self.device)
 
-        self.optimizer = Adam(self.current_policy.parameters(), lr=self.config["lr"], eps=1e-5)
+        self.optimizer = Adam(self.current_policy.parameters(), lr=self.config["lr"])
         self._schedule_fn = lambda step: max(1.0 - float(step / self.config["total_iterations"]), 0)
         self.scheduler = LambdaLR(self.optimizer, lr_lambda=self._schedule_fn)
 
@@ -42,15 +42,15 @@ class Brain:
         indices = np.random.randint(0, full_batch_size, (self.n_workers, self.config["batch_size"]))
 
         for idx in indices:
-            yield states[idx], actions[idx], advs[idx], returns[idx], values[idx], \
-                  log_probs[idx]
+            yield states[idx], actions[idx], advs[idx], returns[idx], values[idx], log_probs[idx]
 
     @mean_of_list
     def train(self, states, actions, rewards, dones, values, log_probs, next_values):
-        returns = self.get_gae(rewards, values.copy(), next_values, dones)
+        returns = self.get_gae(rewards, values, next_values, dones)
         values = np.concatenate(values)
         advs = returns - values
-        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
+        advs = (advs - advs.mean()) / (advs.std() + 1e-6)
+
         pg_losses, v_losses, entropies = [], [], []
         for epoch in range(self.config["n_epochs"]):
             for state, action, q_value, adv, old_value, old_log_prob in self.choose_mini_batch(states, actions, returns,

@@ -64,7 +64,7 @@ class Logger:
             writer.add_scalar("Running Episode Reward", self.running_reward, self.episode)
             writer.add_scalar("Position", self.position, self.episode)
             writer.add_scalar("Running last 10 Reward", self.running_last_10_r, self.episode)
-            writer.add_scalar("Max Episode Ext Reward", self.max_episode_reward, self.episode)
+            writer.add_scalar("Max Episode Reward", self.max_episode_reward, self.episode)
             writer.add_scalar("Running Action Probability", self.running_act_prob, iteration)
             writer.add_scalar("Running Position", self.running_position, iteration)
             writer.add_scalar("Running PG Loss", self.running_training_logs[0], iteration)

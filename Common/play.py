@@ -16,7 +16,7 @@ class Play:
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
         if not os.path.exists("Results"):
             os.mkdir("Results")
-        self.VideoWriter = cv2.VideoWriter("Results/" + "ppo_breakout" + ".avi", self.fourcc, 10.0,
+        self.VideoWriter = cv2.VideoWriter("Results/" + "ppo" + ".avi", self.fourcc, 10.0,
                                            self.env.observation_space.shape[1::-1])
 
         self.score = 0

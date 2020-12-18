@@ -23,14 +23,10 @@ def get_params():
 
     parser_params = parser.parse_args()
 
-    """ 
-     Parameters based on the "Proximal Policy Optimization Algorithms" paper.
-     https://arxiv.org/abs/1707.06347  
-    """
     # region default parameters
     default_params = {"state_shape": (4, 84, 84),
-                      "rollout_length": 128,
-                      "n_epochs": 3,
+                      "rollout_length": 512,
+                      "n_epochs": 10,
                       "batch_size": 32,
                       "lr": 2.5e-4,
                       "gamma": 0.99,
