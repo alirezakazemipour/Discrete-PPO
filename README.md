@@ -29,7 +29,7 @@ python3 main.py
 ## Environments tested
 - [x] Pong
 - [x] Breakout 
-- [x] SuperMarioBros-1-1
+- [x] SuperMarioBros-1-1 [mario branch.](https://github.com/alirezakazemipour/Proximal-Policy-Optimization/tree/mario)
 - [ ] MsPacman
 
 ## Demo
@@ -40,7 +40,7 @@ Breakout | Mario
 ## Result
 - **Following graphs are breakout environment's result**.  
 <p align="center">
-  <img src="https://github.com/alirezakazemipour/Proximal-Policy-Optimization/blob/master/Results/Result.jpg" height=600s>
+  <img src="Results/Result.jpg" height=600s>
 </p>  
 
 ## Reference
@@ -48,4 +48,6 @@ Breakout | Mario
 
 ## Acknowledgement
 [@OpenAI](https://github.com/openai) for [Baselines](https://github.com/openai/baselines).  
-[@higgsfield](https://github.com/higgsfield) for [his ppo code](https://github.com/higgsfield/RL-Adventure-2/blob/master/3.ppo.ipynb).
+[@higgsfield](https://github.com/higgsfield) for [his ppo code](https://github.com/higgsfield/RL-Adventure-2/blob/master/3.ppo.ipynb).  
+[@upiven](https://github.com/uvipen) for [mario-ppo](https://github.com/uvipen/Super-mario-bros-PPO-pytorch).  
+[@roclark](https://github.com/roclark) for [custom reward wrapper](https://github.com/roclark/super-mario-bros-dqn).
