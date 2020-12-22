@@ -42,7 +42,7 @@ class Brain:
         indices = np.random.randint(0, full_batch_size, (self.n_workers, self.config["batch_size"]))
 
         for idx in indices:
-            yield states[idx], actions[idx], advs[idx], returns[idx], values[idx], log_probs[idx]
+            yield states[idx], actions[idx], returns[idx], advs[idx], values[idx], log_probs[idx]
 
     @mean_of_list
     def train(self, states, actions, rewards, dones, values, log_probs, next_values):
